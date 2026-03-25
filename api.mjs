@@ -4,13 +4,20 @@ import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { Resend } from 'resend';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import { FLAVOR_INGREDIENTS, FILLING_EXTRAS, SMB_BASE, SIZE_MULTIPLIERS } from './data/ingredients.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// ── Static files ──────────────────────────────────────────────────────────────
+app.use(express.static(__dirname));
 
 // ── Clients ──────────────────────────────────────────────────────────────────
 
