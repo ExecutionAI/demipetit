@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Petit Demi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #F7F4EF;
+  --surface: #FFFFFF;
+  --border:  #E8E1D9;
+  --ink:     #1C1208;
+  --accent:  #C5956C;
+  --blush:   #F2C4BB;
+  --muted:   #8C7B72;
+  --danger:  #B94A48;
+  --success: #3D7A5E;
+  --warn:    #C5956C;
+  --sidebar: #1C1208;
+  --serif:   'Cormorant Garamond', Georgia, serif;
+  --sans:    'DM Sans', system-ui, sans-serif;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: var(--sans); }
+
+/* ── Login screen ── */
+#loginScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+.login-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 48px 44px; width: 100%; max-width: 380px; text-align: center;
+}
+.login-logo { font-family: var(--serif); font-size: 28px; font-weight: 300; margin-bottom: 4px; }
+.login-sub { font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 36px; }
+.login-input {
+  width: 100%; padding: 13px 16px; border: 1px solid var(--border);
+  background: var(--bg); font-family: var(--sans); font-size: 14px;
+  color: var(--ink); outline: none; margin-bottom: 12px;
+  transition: border-color 0.2s; text-align: center; letter-spacing: 0.1em;
+}
+.login-input:focus { border-color: var(--accent); }
+.login-btn {
+  width: 100%; padding: 13px; background: var(--ink); color: white;
+  border: none; font-family: var(--sans); font-size: 13px;
+  letter-spacing: 0.12em; text-transform: uppercase; transition: background 0.2s;
+}
+.login-btn:hover { background: var(--accent); }
+.login-error { font-family: var(--sans); font-size: 13px; color: var(--danger); margin-top: 12px; display: none; }
+.login-error.show { display: block; }
+
+/* ── App layout ── */
+#app { display: none; min-height: 100vh; }
+#app.visible { display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; flex-shrink: 0; background: var(--sidebar);
+  display: flex; flex-direction: column; position: fixed;
+  top: 0; left: 0; bottom: 0; z-index: 50; overflow-y: auto;
+}
+.sidebar-brand {
+  padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-logo { font-family: var(--serif); font-size: 20px; font-weight: 300; color: white; }
+.sidebar-tagline { font-family: var(--sans); font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 20px 0; }
+.sidebar-section-label { font-family: var(--sans); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.25); padding: 12px 24px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 24px; font-family: var(--sans); font-size: 13px;
+  color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.2s;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+.nav-item.active { color: white; border-left-color: var(--accent); background: rgba(197,149,108,0.1); }
+.nav-badge {
+  margin-left: auto; background: var(--accent); color: white;
+  font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px;
+  min-width: 20px; text-align: center;
+}
+.nav-badge.hidden { display: none; }
+.sidebar-footer { padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-user { font-family: var(--sans); font-size: 12px; color: rgba(255,255,255,0.4); }
+.sidebar-user strong { display: block; color: rgba(255,255,255,0.7); font-weight: 400; margin-bottom: 2px; }
+.sidebar-logout { font-size: 11px; color: rgba(255,255,255,0.3); cursor: pointer; margin-top: 8px; transition: color 0.2s; }
+.sidebar-logout:hover { color: var(--danger); }
+
+/* Main area */
+.main { margin-left: 220px; flex: 1; min-height: 100vh; }
+.main-header { padding: 24px 40px 20px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 40; }
+.main-header-left h1 { font-family: var(--serif); font-size: 26px; font-weight: 300; line-height: 1.1; }
+.main-header-left h1 em { font-style: italic; color: var(--accent); }
+.main-header-left .sub { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 2px; }
+.header-refresh { background: none; border: 1px solid var(--border); padding: 8px 16px; font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.08em; transition: all 0.2s; }
+.header-refresh:hover { border-color: var(--accent); color: var(--ink); }
+.main-body { padding: 36px 40px 80px; }
+
+/* Sections */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Stats cards */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); padding: 24px 20px; position: relative; overflow: hidden; }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); transition: background 0.3s; }
+.stat-card:hover::before { background: var(--accent); }
+.stat-label { font-family: var(--sans); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.stat-num { font-family: var(--serif); font-size: 44px; font-weight: 300; line-height: 1; color: var(--ink); }
+.stat-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* Urgent orders */
+.section-subheader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.section-subheader h2 { font-family: var(--serif); font-size: 20px; font-weight: 300; }
+
+/* Table */
+.table-wrap { background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+.table-toolbar { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 0; border: 1px solid var(--border); overflow: hidden; }
+.filter-tab { padding: 7px 14px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; background: none; border: none; color: var(--muted); transition: all 0.2s; white-space: nowrap; }
+.filter-tab:hover { color: var(--ink); background: var(--bg); }
+.filter-tab.active { background: var(--ink); color: white; }
+.search-input {
+  padding: 7px 14px; border: 1px solid var(--border); background: var(--bg);
+  font-family: var(--sans); font-size: 13px; color: var(--ink); outline: none;
+  transition: border-color 0.2s; min-width: 200px;
+}
+.search-input:focus { border-color: var(--accent); }
+
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 16px; text-align: left; font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #FEFCF9; }
+td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
+.td-name { font-weight: 500; color: var(--ink); }
+.td-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.table-empty { text-align: center; padding: 48px 20px !important; color: var(--muted); font-style: italic; cursor: default !important; }
+.table-empty:hover { background: none !important; }
+
+/* Urgency badges */
+.urgency-badge { display: inline-block; padding: 3px 10px; border-radius: 2px; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; }
+.urgency-red { background: rgba(185,74,72,0.1); color: var(--danger); }
+.urgency-amber { background: rgba(197,149,108,0.15); color: var(--accent); }
+.urgency-green { background: rgba(61,122,94,0.1); color: var(--success); }
+.urgency-grey { background: var(--bg); color: var(--muted); }
+
+/* Status badges */
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 2px; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap; }
+.s-quote_received { background: #EBF4FF; color: #2563EB; }
+.s-confirmed     { background: rgba(61,122,94,0.12); color: var(--success); }
+.s-in_production { background: rgba(197,149,108,0.15); color: var(--accent); }
+.s-ready         { background: rgba(242,196,187,0.4); color: #9B3F2A; }
+.s-delivered     { background: var(--bg); color: var(--muted); }
+.s-cancelled     { background: rgba(185,74,72,0.08); color: var(--danger); }
+
+/* Action button */
+.btn-action { padding: 6px 12px; border: 1px solid var(--border); background: none; font-family: var(--sans); font-size: 11px; color: var(--muted); transition: all 0.2s; }
+.btn-action:hover { border-color: var(--accent); color: var(--ink); }
+.btn-danger { border-color: transparent; }
+.btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ── Detail panel ── */
+.panel-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(28,18,8,0.2); backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.panel-overlay.open { opacity: 1; pointer-events: all; }
+.detail-panel { position: fixed; right: 0; top: 0; bottom: 0; z-index: 101; width: 500px; background: var(--surface); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.34, 0.1, 0.1, 1); overflow-y: auto; box-shadow: -8px 0 40px rgba(28,18,8,0.12); }
+.detail-panel.open { transform: translateX(0); }
+.panel-header { padding: 24px 28px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.panel-close { background: none; border: none; font-size: 20px; color: var(--muted); line-height: 1; padding: 4px; transition: color 0.2s; }
+.panel-close:hover { color: var(--ink); }
+.panel-title { font-family: var(--serif); font-size: 22px; font-weight: 300; }
+.panel-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 28px; }
+.panel-section { }
+.panel-section-title { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.panel-row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; margin-bottom: 10px; }
+.panel-key { font-family: var(--sans); font-size: 12px; color: var(--muted); padding-top: 2px; }
+.panel-val { font-family: var(--sans); font-size: 13px; color: var(--ink); }
+.panel-ai { background: rgba(197,149,108,0.07); border: 1px solid rgba(197,149,108,0.2); padding: 16px 18px; font-family: var(--serif); font-size: 15px; font-style: italic; color: var(--muted); line-height: 1.7; }
+.panel-field label { font-family: var(--sans); font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px; }
+.panel-input, .panel-select, .panel-textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); background: var(--bg);
+  font-family: var(--sans); font-size: 13px; color: var(--ink); outline: none;
+  transition: border-color 0.2s; -webkit-appearance: none;
+}
+.panel-input:focus, .panel-select:focus, .panel-textarea:focus { border-color: var(--accent); }
+.panel-textarea { min-height: 80px; resize: vertical; }
+.panel-price-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.panel-actions { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border); }
+.btn-panel { padding: 10px 20px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; border: none; transition: all 0.2s; }
+.btn-panel-primary { background: var(--ink); color: white; }
+.btn-panel-primary:hover { background: var(--accent); }
+.btn-panel-secondary { background: none; border: 1px solid var(--border); color: var(--muted); }
+.btn-panel-secondary:hover { border-color: var(--ink); color: var(--ink); }
+.btn-panel-wa { background: #25D366; color: white; }
+.btn-panel-wa:hover { background: #1db954; }
+.btn-panel-danger { background: none; border: 1px solid var(--border); color: var(--muted); margin-left: auto; }
+.btn-panel-danger:hover { border-color: var(--danger); color: var(--danger); }
+.save-indicator { font-family: var(--sans); font-size: 12px; color: var(--success); display: none; align-items: center; gap: 6px; }
+.save-indicator.show { display: flex; }
+
+/* ── Calendar ── */
+.cal-nav { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.cal-nav-btn { background: none; border: 1px solid var(--border); padding: 8px 16px; font-family: var(--sans); font-size: 12px; color: var(--muted); transition: all 0.2s; }
+.cal-nav-btn:hover { border-color: var(--ink); color: var(--ink); }
+.cal-title { font-family: var(--serif); font-size: 22px; font-weight: 300; }
+.cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.cal-day { background: var(--surface); border: 1px solid var(--border); min-height: 120px; padding: 12px; }
+.cal-day-header { font-family: var(--sans); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.cal-day-num { font-family: var(--serif); font-size: 16px; color: var(--ink); }
+.cal-day.today { border-color: var(--accent); }
+.cal-day.today .cal-day-num { color: var(--accent); }
+.cal-order-pill { font-family: var(--sans); font-size: 11px; padding: 4px 8px; margin-bottom: 4px; cursor: pointer; border-radius: 2px; transition: opacity 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-order-pill:hover { opacity: 0.8; }
+
+/* ── Shopping list ── */
+.shopping-wrap { display: grid; grid-template-columns: 1fr 380px; gap: 28px; }
+.orders-checklist { background: var(--surface); border: 1px solid var(--border); }
+.checklist-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.checklist-header h3 { font-family: var(--serif); font-size: 18px; font-weight: 300; }
+.checklist-item { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; cursor: pointer; transition: background 0.15s; }
+.checklist-item:last-child { border-bottom: none; }
+.checklist-item:hover { background: var(--bg); }
+.checklist-item.checked { background: rgba(197,149,108,0.06); }
+.check-box { width: 18px; height: 18px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.checklist-item.checked .check-box { background: var(--accent); border-color: var(--accent); }
+.check-tick { color: white; font-size: 11px; display: none; }
+.checklist-item.checked .check-tick { display: block; }
+.checklist-item-info { flex: 1; }
+.checklist-item-name { font-family: var(--sans); font-size: 13px; font-weight: 500; }
+.checklist-item-sub { font-family: var(--sans); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.shopping-list-panel { background: var(--surface); border: 1px solid var(--border); }
+.list-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.list-header h3 { font-family: var(--serif); font-size: 18px; font-weight: 300; }
+.btn-generate { background: var(--ink); color: white; padding: 8px 18px; border: none; font-family: var(--sans); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s; }
+.btn-generate:hover { background: var(--accent); }
+.btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-print { background: none; border: 1px solid var(--border); padding: 8px 16px; font-family: var(--sans); font-size: 12px; color: var(--muted); transition: all 0.2s; }
+.btn-print:hover { border-color: var(--ink); color: var(--ink); }
+.ingredient-group { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.ingredient-group-title { font-family: var(--sans); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.ingredient-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; border-bottom: 1px dashed var(--border); }
+.ingredient-row:last-child { border-bottom: none; }
+.ingredient-name { font-family: var(--sans); font-size: 13px; }
+.ingredient-amount { font-family: var(--serif); font-size: 14px; font-weight: 400; color: var(--ink); }
+.list-empty { padding: 40px 20px; text-align: center; font-family: var(--sans); font-size: 13px; color: var(--muted); font-style: italic; }
+
+/* ── Clients ── */
+.clients-table-wrap { background: var(--surface); border: 1px solid var(--border); }
+
+/* ── Delete modal ── */
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(28,18,8,0.35); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-card { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 380px; }
+.modal-header { padding: 24px 24px 16px; border-bottom: 1px solid var(--border); }
+.modal-title { font-family: var(--serif); font-size: 20px; font-weight: 300; margin-bottom: 4px; }
+.modal-sub { font-family: var(--sans); font-size: 12px; color: var(--muted); }
+.modal-body { padding: 20px 24px; }
+.modal-body p { font-family: var(--sans); font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-modal { padding: 10px 20px; font-family: var(--sans); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; border: none; transition: all 0.2s; }
+.btn-modal-cancel { background: none; border: 1px solid var(--border); color: var(--muted); }
+.btn-modal-cancel:hover { border-color: var(--ink); color: var(--ink); }
+.btn-modal-delete { background: var(--danger); color: white; }
+.btn-modal-delete:hover { opacity: 0.85; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media print {
+  .sidebar, .main-header, .shopping-wrap > :first-child, .list-header .btn-generate, .btn-print { display: none !important; }
+  .main { margin-left: 0; }
+  .shopping-list-panel { border: none; box-shadow: none; width: 100%; }
+}
+
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .shopping-wrap { grid-template-columns: 1fr; }
+  .cal-week { grid-template-columns: repeat(3, 1fr); }
+  .detail-panel { width: 90vw; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .main-body { padding: 24px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Petit Demi</div>
+    <div class="login-sub">Admin</div>
+    <input type="password" class="login-input" id="tokenInput" placeholder="Enter your password" onkeydown="if(event.key==='Enter') doLogin()">
+    <button class="login-btn" onclick="doLogin()">Enter</button>
+    <div class="login-error" id="loginError">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">Petit Demi</div>
+      <div class="sidebar-tagline">Order Admin</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main</div>
+      <div class="nav-item active" onclick="showSection('dashboard', this)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="2" width="7" height="7" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="11" width="7" height="7" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="11" width="7" height="7" stroke="currentColor" stroke-width="1.5"/></svg>
+        Dashboard
+        <span class="nav-badge hidden" id="badge-urgent">0</span>
+      </div>
+      <div class="nav-item" onclick="showSection('orders', this)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        All Orders
+        <span class="nav-badge hidden" id="badge-new">0</span>
+      </div>
+      <div class="nav-item" onclick="showSection('calendar', this)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="14" stroke="currentColor" stroke-width="1.5"/><path d="M6 2v4M14 2v4M2 8h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Calendar
+      </div>
+      <div class="nav-item" onclick="showSection('shopping', this)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M6 2l-2 5h12l-2-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="2" y="7" width="16" height="11" stroke="currentColor" stroke-width="1.5"/><path d="M8 11h4M10 9v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Shopping List
+      </div>
+      <div class="nav-item" onclick="showSection('clients', this)">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="6" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M3 18c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Clients
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><strong>Demi</strong>Petit Demi</div>
+      <div class="sidebar-logout" onclick="logout()">Sign out</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-header-left">
+        <h1 id="headerTitle">Good <em>morning</em> ✨</h1>
+        <div class="sub" id="headerSub">Loading your orders...</div>
+      </div>
+      <button class="header-refresh" onclick="initApp()">↻ Refresh</button>
+    </div>
+
+    <div class="main-body">
+
+      <!-- Dashboard -->
+      <div class="section active" id="section-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total orders</div>
+            <div class="stat-num" id="stat-total">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">New quotes</div>
+            <div class="stat-num" id="stat-new">—</div>
+            <div class="stat-sub">awaiting confirmation</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">In production</div>
+            <div class="stat-num" id="stat-prod">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">This week</div>
+            <div class="stat-num" id="stat-week">—</div>
+            <div class="stat-sub">deliveries due</div>
+          </div>
+        </div>
+
+        <div class="section-subheader">
+          <h2>Urgent — next 3 days</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Customer</th><th>Product</th><th>Delivery</th><th>Status</th><th></th></tr></thead>
+            <tbody id="urgentTbody"><tr><td colspan="5" class="table-empty"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Orders -->
+      <div class="section" id="section-orders">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="filter-tabs" id="orderFilterTabs">
+              <button class="filter-tab active" data-status="all" onclick="setFilter('all', this)">All</button>
+              <button class="filter-tab" data-status="quote_received" onclick="setFilter('quote_received', this)">New</button>
+              <button class="filter-tab" data-status="confirmed" onclick="setFilter('confirmed', this)">Confirmed</button>
+              <button class="filter-tab" data-status="in_production" onclick="setFilter('in_production', this)">In production</button>
+              <button class="filter-tab" data-status="ready" onclick="setFilter('ready', this)">Ready</button>
+              <button class="filter-tab" data-status="delivered" onclick="setFilter('delivered', this)">Delivered</button>
+              <button class="filter-tab" data-status="cancelled" onclick="setFilter('cancelled', this)">Cancelled</button>
+            </div>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search name or email..." oninput="renderOrders()">
+          </div>
+          <table>
+            <thead><tr><th>Customer</th><th>Product</th><th>Delivery</th><th>Days left</th><th>Price</th><th>Status</th><th></th></tr></thead>
+            <tbody id="ordersTbody"><tr><td colspan="7" class="table-empty"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="section" id="section-calendar">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="moveWeek(-1)">← Prev</button>
+          <div class="cal-title" id="calTitle"></div>
+          <button class="cal-nav-btn" onclick="moveWeek(1)">Next →</button>
+          <button class="cal-nav-btn" onclick="resetWeek()">Today</button>
+        </div>
+        <div class="cal-week" id="calWeek"></div>
+      </div>
+
+      <!-- Shopping list -->
+      <div class="section" id="section-shopping">
+        <div class="shopping-wrap">
+          <div>
+            <div class="orders-checklist">
+              <div class="checklist-header">
+                <h3>Select orders to prepare</h3>
+                <span style="font-family: var(--sans); font-size: 12px; color: var(--muted);" id="checklistCount">0 selected</span>
+              </div>
+              <div id="checklistItems"><div style="padding:20px;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">Loading orders...</div></div>
+            </div>
+          </div>
+          <div class="shopping-list-panel">
+            <div class="list-header">
+              <h3>Ingredient list</h3>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-print" onclick="window.print()" id="btnPrint" style="display:none;">🖨 Print</button>
+                <button class="btn-generate" id="btnGenerate" onclick="generateShoppingList()">Generate →</button>
+              </div>
+            </div>
+            <div id="shoppingListContent"><div class="list-empty">Select orders and click Generate.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clients -->
+      <div class="section" id="section-clients">
+        <div class="clients-table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Since</th><th></th></tr></thead>
+            <tbody id="clientsTbody"><tr><td colspan="6" class="table-empty"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Detail panel -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title" id="panelTitle">Order details</div>
+      <div id="panelStatus"></div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target===this) closeDeleteModal()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Delete order</div>
+      <div class="modal-sub">This cannot be undone</div>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to delete the order for <strong id="deleteModalName"></strong>?</p>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-modal btn-modal-delete" id="deleteModalConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = ['3000','3002','3003'].includes(window.location.port)
+  ? 'http://localhost:3001'
+  : 'https://petitdemi-api.onrender.com';
+
+let TOKEN = '';
+let allOrders = [];
+let allClients = [];
+let currentFilter = 'all';
+let currentOrder = null;
+let calWeekStart = getMonday(new Date());
+let checkedOrders = new Set();
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+function doLogin() {
+  const val = document.getElementById('tokenInput').value.trim();
+  if (!val) return;
+  TOKEN = val;
+  verifyToken();
+}
+
+async function verifyToken() {
+  try {
+    const r = await apiFetch('/api/admin/stats');
+    localStorage.setItem('pd_admin_token', TOKEN);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    initApp(r);
+  } catch {
+    TOKEN = '';
+    document.getElementById('loginError').classList.add('show');
+    document.getElementById('tokenInput').value = '';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('pd_admin_token');
+  location.reload();
+}
+
+// Auto-login
+const saved = localStorage.getItem('pd_admin_token');
+if (saved) { TOKEN = saved; verifyToken(); }
+
+// ── API helper ────────────────────────────────────────────────────────────────
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, {
+    ...opts,
+    headers: { 'x-admin-token': TOKEN, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function initApp(stats) {
+  try {
+    if (!stats) stats = await apiFetch('/api/admin/stats');
+    updateStats(stats);
+    allOrders = await apiFetch('/api/admin/orders');
+    renderOrders();
+    renderUrgent();
+    renderCalendar();
+    renderChecklist();
+    updateHeader();
+    allClients = await apiFetch('/api/admin/clients');
+    renderClients();
+  } catch (err) {
+    console.error('initApp error:', err.message);
+  }
+}
+
+function updateStats(s) {
+  document.getElementById('stat-total').textContent = s.total ?? '—';
+  document.getElementById('stat-new').textContent   = s.quote_received ?? '—';
+  document.getElementById('stat-prod').textContent  = s.in_production ?? '—';
+  document.getElementById('stat-week').textContent  = s.this_week ?? '—';
+  const u = s.urgent || 0;
+  const n = s.quote_received || 0;
+  setNavBadge('badge-urgent', u);
+  setNavBadge('badge-new', n);
+  document.getElementById('headerSub').textContent = `${s.total || 0} total orders · ${n} awaiting confirmation`;
+}
+
+function setNavBadge(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = n;
+  el.classList.toggle('hidden', n === 0);
+}
+
+function updateHeader() {
+  const h = new Date().getHours();
+  const greeting = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  document.getElementById('headerTitle').innerHTML = `Good <em>${greeting}</em> ✨`;
+}
+
+// ── Section nav ───────────────────────────────────────────────────────────────
+
+function showSection(name, navEl) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  navEl.classList.add('active');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const STATUS_LABELS = { quote_received:'New Quote', confirmed:'Confirmed', in_production:'In Production', ready:'Ready', delivered:'Delivered', cancelled:'Cancelled' };
+const PRODUCT_LABELS = { cake:'Cake', cupcakes:'Cupcakes', cheesecake:'Cheesecake', brownie:'Brownie', tart:'Tart', cookies:'Cookies' };
+const SIZE_LABELS = { '7_single':'7" Single','7_double':'7" Double','7_triple':'7" Triple','9_single':'9" Single' };
+
+function statusBadge(s) {
+  return `<span class="status-badge s-${s}">${STATUS_LABELS[s] || s}</span>`;
+}
+
+function daysLeft(dateStr) {
+  const diff = Math.ceil((new Date(dateStr + 'T00:00:00') - new Date().setHours(0,0,0,0)) / 86400000);
+  if (diff < 0) return { label: `${Math.abs(diff)}d overdue`, cls: 'urgency-red' };
+  if (diff === 0) return { label: 'Today!', cls: 'urgency-red' };
+  if (diff <= 2) return { label: `${diff}d`, cls: 'urgency-red' };
+  if (diff <= 5) return { label: `${diff}d`, cls: 'urgency-amber' };
+  return { label: `${diff}d`, cls: 'urgency-green' };
+}
+
+function fmtDate(d) { return d ? new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—'; }
+
+function productLabel(o) {
+  let p = PRODUCT_LABELS[o.product_type] || o.product_type;
+  if (o.cake_size && SIZE_LABELS[o.cake_size]) p += ` · ${SIZE_LABELS[o.cake_size]}`;
+  return p;
+}
+
+// ── Render: urgent ────────────────────────────────────────────────────────────
+
+function renderUrgent() {
+  const today = new Date().setHours(0,0,0,0);
+  const in3 = today + 3 * 86400000;
+  const rows = allOrders.filter(o => {
+    if (['delivered','cancelled'].includes(o.status)) return false;
+    const d = new Date(o.delivery_date+'T00:00:00').getTime();
+    return d <= in3;
+  }).sort((a,b) => a.delivery_date.localeCompare(b.delivery_date));
+
+  const tb = document.getElementById('urgentTbody');
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="table-empty">🎉 No urgent orders right now!</td></tr>'; return; }
+  tb.innerHTML = rows.map(o => {
+    const dl = daysLeft(o.delivery_date);
+    return `<tr onclick="openPanel('${esc(o.id)}')">
+      <td><div class="td-name">${esc(o.client?.full_name||'—')}</div><div class="td-sub">${esc(o.client?.email||'')}</div></td>
+      <td>${esc(productLabel(o))}<div class="td-sub">${esc(o.flavor||'')}</div></td>
+      <td>${fmtDate(o.delivery_date)}</td>
+      <td><span class="urgency-badge ${dl.cls}">${dl.label}</span></td>
+      <td>${statusBadge(o.status)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Render: orders table ──────────────────────────────────────────────────────
+
+function renderOrders() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  let rows = allOrders.filter(o => {
+    if (currentFilter !== 'all' && o.status !== currentFilter) return false;
+    if (q && !`${o.client?.full_name||''} ${o.client?.email||''} ${o.flavor||''}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const tb = document.getElementById('ordersTbody');
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="table-empty">No orders found.</td></tr>'; return; }
+
+  tb.innerHTML = rows.map(o => {
+    const dl = ['delivered','cancelled'].includes(o.status) ? { label:'—', cls:'urgency-grey' } : daysLeft(o.delivery_date);
+    return `<tr onclick="openPanel('${esc(o.id)}')">
+      <td><div class="td-name">${esc(o.client?.full_name||'—')}</div><div class="td-sub">${esc(o.client?.email||'')}</div></td>
+      <td>${esc(productLabel(o))}<div class="td-sub">${esc(o.flavor||'')}</div></td>
+      <td>${fmtDate(o.delivery_date)}</td>
+      <td><span class="urgency-badge ${dl.cls}">${dl.label}</span></td>
+      <td>${o.total_price ? `€${parseFloat(o.total_price).toFixed(2)}` : '—'}</td>
+      <td>${statusBadge(o.status)}</td>
+      <td><button class="btn-action btn-danger" data-id="${esc(o.id)}" data-name="${esc(o.client?.full_name||'this order')}" onclick="event.stopPropagation(); confirmDelete(this.dataset.id, this.dataset.name)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function setFilter(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderOrders();
+}
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+
+const VALID_TRANSITIONS = {
+  quote_received: ['confirmed','cancelled'],
+  confirmed:      ['in_production','cancelled'],
+  in_production:  ['ready','cancelled'],
+  ready:          ['delivered'],
+  delivered:      [],
+  cancelled:      ['quote_received'],
+};
+
+function openPanel(id) {
+  currentOrder = allOrders.find(o => o.id === id);
+  if (!currentOrder) return;
+  const o = currentOrder;
+  const client = o.client || {};
+
+  document.getElementById('panelTitle').textContent = `${PRODUCT_LABELS[o.product_type] || o.product_type}${o.cake_size ? ' · ' + (SIZE_LABELS[o.cake_size]||o.cake_size) : ''}`;
+  document.getElementById('panelStatus').innerHTML = statusBadge(o.status);
+
+  const allowed = [o.status, ...(VALID_TRANSITIONS[o.status] || [])];
+  const statusOpts = Object.keys(STATUS_LABELS).map(s => `<option value="${s}"${!allowed.includes(s)?'disabled':''} ${s===o.status?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
+
+  document.getElementById('panelBody').innerHTML = `
+    <div class="panel-section">
+      <div class="panel-section-title">Customer</div>
+      <div class="panel-row"><span class="panel-key">Name</span><span class="panel-val">${esc(client.full_name||'—')}</span></div>
+      <div class="panel-row"><span class="panel-key">Email</span><span class="panel-val"><a href="mailto:${esc(client.email||'')}" style="color:var(--accent)">${esc(client.email||'—')}</a></span></div>
+      <div class="panel-row"><span class="panel-key">Phone</span><span class="panel-val">${client.phone ? `<a href="https://wa.me/31${client.phone.replace(/^0/,'')}" target="_blank" style="color:#25D366">${esc(client.phone)}</a>` : '—'}</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Order details</div>
+      <div class="panel-row"><span class="panel-key">Product</span><span class="panel-val">${esc(productLabel(o))}</span></div>
+      <div class="panel-row"><span class="panel-key">Flavour</span><span class="panel-val">${esc(o.flavor||'—')}</span></div>
+      <div class="panel-row"><span class="panel-key">Filling</span><span class="panel-val">${esc(o.filling||'—')}</span></div>
+      <div class="panel-row"><span class="panel-key">Decoration</span><span class="panel-val">${esc(o.decoration_type||'basic')}${o.decoration_notes?': '+esc(o.decoration_notes):''}</span></div>
+      <div class="panel-row"><span class="panel-key">Occasion</span><span class="panel-val">${esc(o.occasion||'—')}</span></div>
+      <div class="panel-row"><span class="panel-key">Delivery</span><span class="panel-val">${fmtDate(o.delivery_date)}</span></div>
+      <div class="panel-row"><span class="panel-key">Received</span><span class="panel-val">${fmtDate(o.created_at?.split('T')[0])}</span></div>
+    </div>
+    ${o.ai_summary ? `<div class="panel-ai">"${esc(o.ai_summary)}"</div>` : ''}
+    <div class="panel-section">
+      <div class="panel-section-title">Update</div>
+      <div class="panel-field" style="margin-bottom:14px;">
+        <label>Status</label>
+        <select class="panel-select" id="panelStatusSelect">${statusOpts}</select>
+      </div>
+      <div class="panel-price-row">
+        <div class="panel-field">
+          <label>Base (€)</label>
+          <input class="panel-input" type="number" id="panelBase" value="${o.base_price||''}" step="0.01" min="0" placeholder="35.00">
+        </div>
+        <div class="panel-field">
+          <label>Extras (€)</label>
+          <input class="panel-input" type="number" id="panelExtras" value="${o.extras_price||0}" step="0.01" min="0" placeholder="0.00">
+        </div>
+        <div class="panel-field">
+          <label>Total (€)</label>
+          <input class="panel-input" type="number" id="panelTotal" value="${o.total_price||''}" step="0.01" min="0" placeholder="—">
+        </div>
+      </div>
+      <div class="panel-field" style="margin-top:14px;">
+        <label>Delivery date</label>
+        <input class="panel-input" type="date" id="panelDate" value="${o.delivery_date||''}">
+      </div>
+      <div class="panel-field" style="margin-top:14px;">
+        <label>Internal notes</label>
+        <textarea class="panel-textarea" id="panelNotes" placeholder="Private notes — not visible to customer...">${esc(o.internal_notes||'')}</textarea>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn-panel btn-panel-primary" onclick="savePanel()">Save changes</button>
+      <button class="btn-panel btn-panel-wa" onclick="copyWATemplate()">📱 WhatsApp</button>
+      <div class="save-indicator" id="saveIndicator">✓ Saved</div>
+      <button class="btn-panel btn-panel-danger" onclick="confirmDelete('${esc(o.id)}','${esc(client.full_name||'this order')}')">Delete</button>
+    </div>
+  `;
+
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  currentOrder = null;
+}
+
+async function savePanel() {
+  if (!currentOrder) return;
+  const updates = {
+    status:         document.getElementById('panelStatusSelect').value,
+    base_price:     parseFloat(document.getElementById('panelBase').value) || null,
+    extras_price:   parseFloat(document.getElementById('panelExtras').value) || 0,
+    total_price:    parseFloat(document.getElementById('panelTotal').value) || null,
+    delivery_date:  document.getElementById('panelDate').value || null,
+    internal_notes: document.getElementById('panelNotes').value.trim() || null,
+  };
+  try {
+    const updated = await apiFetch(`/api/admin/orders/${currentOrder.id}`, { method: 'PATCH', body: JSON.stringify(updates) });
+    // Update local array
+    const idx = allOrders.findIndex(o => o.id === currentOrder.id);
+    if (idx >= 0) { allOrders[idx] = { ...allOrders[idx], ...updated }; currentOrder = allOrders[idx]; }
+    renderOrders(); renderUrgent(); renderCalendar();
+    document.getElementById('panelStatus').innerHTML = statusBadge(updated.status);
+    const ind = document.getElementById('saveIndicator');
+    ind.classList.add('show');
+    setTimeout(() => ind.classList.remove('show'), 2000);
+  } catch (err) {
+    alert('Save failed: ' + err.message);
+  }
+}
+
+function copyWATemplate() {
+  if (!currentOrder) return;
+  const o = currentOrder;
+  const client = o.client || {};
+  const name = (client.full_name||'').split(' ')[0] || 'there';
+  const templates = {
+    quote_received: `Hi ${name}! 🎂 Thanks for reaching out to Petit Demi. I've received your order for a ${PRODUCT_LABELS[o.product_type]||o.product_type}${o.flavor?' ('+o.flavor+')':''} for ${fmtDate(o.delivery_date)}. Let me check availability and get back to you shortly!`,
+    confirmed: `Hi ${name}! Great news — your order is confirmed! 🎉 I'm baking your ${PRODUCT_LABELS[o.product_type]||o.product_type}${o.flavor?' ('+o.flavor+')':''} and it'll be ready on ${fmtDate(o.delivery_date)}. I'll be in touch with pickup details.`,
+    in_production: `Hi ${name}! Just a little update — your cake is in the oven! 🧁 Baking your ${o.flavor||''} ${PRODUCT_LABELS[o.product_type]||o.product_type} now. Pickup: ${fmtDate(o.delivery_date)}.`,
+    ready: `Hi ${name}! Your order is ready for pickup! 🎂✨ Your ${o.flavor||''} ${PRODUCT_LABELS[o.product_type]||o.product_type} is fresh out of the kitchen. When would you like to collect it?`,
+    delivered: `Hi ${name}! Hope you loved your cake! 🌸 Would love to see photos if you share them — tag @petit.demi on Instagram!`,
+  };
+  const msg = templates[o.status] || `Hi ${name}! Petit Demi here — just following up on your cake order.`;
+  navigator.clipboard.writeText(msg).then(() => alert('WhatsApp message copied! Open WhatsApp and paste.')).catch(() => prompt('Copy this message:', msg));
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+function getMonday(d) {
+  const day = d.getDay(); const diff = (day + 6) % 7;
+  const m = new Date(d); m.setDate(d.getDate() - diff); m.setHours(0,0,0,0); return m;
+}
+
+function moveWeek(dir) { calWeekStart = new Date(calWeekStart.getTime() + dir * 7 * 86400000); renderCalendar(); }
+function resetWeek() { calWeekStart = getMonday(new Date()); renderCalendar(); }
+
+function renderCalendar() {
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(calWeekStart); d.setDate(calWeekStart.getDate() + i); return d; });
+  const today = new Date().setHours(0,0,0,0);
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const monthYear = calWeekStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  document.getElementById('calTitle').textContent = monthYear;
+
+  const STATUS_COLORS = { quote_received:'#DBEAFE', confirmed:'#D1FAE5', in_production:'#FEF3C7', ready:'#FEE2E2', delivered:'#F3F4F6', cancelled:'#FEE2E2' };
+  const STATUS_TEXT   = { quote_received:'#2563EB', confirmed:'#065F46', in_production:'#92400E', ready:'#991B1B', delivered:'#6B7280', cancelled:'#991B1B' };
+
+  const calEl = document.getElementById('calWeek');
+  calEl.innerHTML = days.map((d, i) => {
+    const dateStr = d.toISOString().split('T')[0];
+    const isToday = d.getTime() === today;
+    const dayOrders = allOrders.filter(o => o.delivery_date === dateStr && !['cancelled'].includes(o.status));
+    const pillsHtml = dayOrders.map(o => {
+      const bg = STATUS_COLORS[o.status] || '#F3F4F6';
+      const fg = STATUS_TEXT[o.status] || '#374151';
+      return `<div class="cal-order-pill" style="background:${bg};color:${fg};" onclick="openPanel('${esc(o.id)}')">${esc(o.client?.full_name||'Order')}</div>`;
+    }).join('');
+    return `<div class="cal-day${isToday?' today':''}">
+      <div class="cal-day-header"><span>${dayNames[i]}</span><span class="cal-day-num">${d.getDate()}</span></div>
+      ${pillsHtml || ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Shopping list ─────────────────────────────────────────────────────────────
+
+function renderChecklist() {
+  const eligible = allOrders.filter(o => ['confirmed','in_production'].includes(o.status));
+  const container = document.getElementById('checklistItems');
+  if (!eligible.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">No confirmed or in-production orders.</div>'; return; }
+  container.innerHTML = eligible.map(o => `
+    <div class="checklist-item${checkedOrders.has(o.id)?' checked':''}" onclick="toggleCheck('${esc(o.id)}', this)" data-id="${esc(o.id)}">
+      <div class="check-box"><span class="check-tick">✓</span></div>
+      <div class="checklist-item-info">
+        <div class="checklist-item-name">${esc(o.client?.full_name||'Order')} — ${esc(productLabel(o))}</div>
+        <div class="checklist-item-sub">${esc(o.flavor||'No flavour')} · Due ${fmtDate(o.delivery_date)}</div>
+      </div>
+    </div>`).join('');
+  updateChecklistCount();
+}
+
+function toggleCheck(id, el) {
+  if (checkedOrders.has(id)) checkedOrders.delete(id); else checkedOrders.add(id);
+  el.classList.toggle('checked', checkedOrders.has(id));
+  updateChecklistCount();
+}
+
+function updateChecklistCount() {
+  document.getElementById('checklistCount').textContent = `${checkedOrders.size} selected`;
+  document.getElementById('btnGenerate').disabled = checkedOrders.size === 0;
+}
+
+async function generateShoppingList() {
+  if (checkedOrders.size === 0) return;
+  const btn = document.getElementById('btnGenerate');
+  btn.disabled = true; btn.textContent = 'Generating...';
+  try {
+    const result = await apiFetch('/api/admin/shopping-list', { method: 'POST', body: JSON.stringify({ order_ids: [...checkedOrders] }) });
+    renderShoppingList(result);
+    document.getElementById('btnPrint').style.display = '';
+  } catch (err) {
+    document.getElementById('shoppingListContent').innerHTML = `<div class="list-empty">Error: ${esc(err.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Generate →';
+}
+
+function renderShoppingList({ groups, order_count }) {
+  const GROUP_LABELS = { dry:'Dry Goods', dairy:'Dairy & Fats', eggs:'Eggs', extras:'Extras & Flavourings' };
+  let html = `<div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--sans);font-size:12px;color:var(--muted);">For ${order_count} order${order_count!==1?'s':''}:</div>`;
+  for (const [key, items] of Object.entries(groups)) {
+    if (!items.length) continue;
+    html += `<div class="ingredient-group"><div class="ingredient-group-title">${GROUP_LABELS[key]||key}</div>`;
+    items.forEach(i => {
+      html += `<div class="ingredient-row"><span class="ingredient-name">${esc(i.name)}</span><span class="ingredient-amount">${i.amount} ${esc(i.unit)}</span></div>`;
+    });
+    html += '</div>';
+  }
+  document.getElementById('shoppingListContent').innerHTML = html;
+}
+
+// ── Clients ───────────────────────────────────────────────────────────────────
+
+function renderClients() {
+  const tb = document.getElementById('clientsTbody');
+  if (!allClients.length) { tb.innerHTML = '<tr><td colspan="6" class="table-empty">No clients yet.</td></tr>'; return; }
+  tb.innerHTML = allClients.map(c => `<tr>
+    <td><div class="td-name">${esc(c.full_name)}</div></td>
+    <td><a href="mailto:${esc(c.email)}" style="color:var(--accent)">${esc(c.email)}</a></td>
+    <td>${c.phone ? `<a href="https://wa.me/31${c.phone.replace(/^0/,'')}" target="_blank" style="color:#25D366">${esc(c.phone)}</a>` : '—'}</td>
+    <td>${c.order_count || 0}</td>
+    <td>${fmtDate(c.created_at?.split('T')[0])}</td>
+    <td>${c.phone ? `<a href="https://wa.me/31${c.phone.replace(/^0/,'')}" target="_blank" style="color:#25D366;font-size:18px;">💬</a>` : ''}</td>
+  </tr>`).join('');
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+
+function confirmDelete(id, name) {
+  document.getElementById('deleteModalName').textContent = name;
+  document.getElementById('deleteModalConfirm').onclick = () => executeDelete(id);
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+async function executeDelete(id) {
+  const btn = document.getElementById('deleteModalConfirm');
+  btn.disabled = true; btn.textContent = 'Deleting...';
+  try {
+    await apiFetch(`/api/admin/orders/${id}`, { method: 'DELETE' });
+    allOrders = allOrders.filter(o => o.id !== id);
+    if (currentOrder?.id === id) closePanel();
+    closeDeleteModal();
+    renderOrders(); renderUrgent(); renderCalendar(); renderChecklist();
+  } catch (err) {
+    alert('Delete failed: ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = 'Delete';
+}
+</script>
+</body>
+</html>

@@ -1,2053 +1,597 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1C3A2B">
-<title>MediTrack — Héctor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petit Demi — Custom Cakes Amsterdam</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  /* ── Variables ─────────────────────────────────────────────────────── */
-  :root {
-    --bg:        #FDF6EE;
-    --bg2:       #F5EDE0;
-    --surface:   #FFFFFF;
-    --green:     #1C3A2B;
-    --green-mid: #2C5F2E;
-    --green-lt:  #4A8C52;
-    --accent:    #E8734A;
-    --gold:      #D4A843;
-    --gold-lt:   #F5C842;
-    --red:       #C0392B;
-    --muted:     #8A8070;
-    --text:      #1A1408;
-    --text2:     #5C5040;
-    --border:    #E8DDD0;
-    --shadow:    0 2px 12px rgba(28,58,43,0.10), 0 1px 3px rgba(28,58,43,0.06);
-    --shadow-lg: 0 8px 32px rgba(28,58,43,0.14), 0 2px 8px rgba(28,58,43,0.08);
-    --r:         16px;
-    --r-sm:      10px;
-    --tab-h:     64px;
-    --safe-b:    env(safe-area-inset-bottom, 0px);
-  }
-
-  /* ── Reset ─────────────────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { height: 100%; background: var(--green); }
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100%;
-    max-width: 430px;
-    margin: 0 auto;
-    position: relative;
-    overflow-x: hidden;
-  }
-  h1,h2,h3,h4 { font-family: 'Fraunces', serif; font-weight: 600; line-height: 1.2; }
-  button { cursor: pointer; border: none; background: none; font-family: inherit; }
-  input, textarea { font-family: inherit; }
 
-  /* ── Login Screen ──────────────────────────────────────────────────── */
-  #login-screen {
-    position: fixed; inset: 0; z-index: 100;
-    background: var(--green);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 32px 24px;
-    gap: 0;
-  }
-  .login-leaf {
-    width: 72px; height: 72px; margin-bottom: 24px;
-    background: rgba(255,255,255,0.12);
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-  }
-  .login-leaf span { transform: rotate(45deg); display: block; }
-  .login-title {
-    font-family: 'Fraunces', serif;
-    font-size: 36px; color: #fff; letter-spacing: -1px;
-    margin-bottom: 4px;
-  }
-  .login-sub { color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 40px; }
-  .login-form { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; }
-  .login-input {
-    width: 100%; padding: 16px 20px;
-    background: rgba(255,255,255,0.10);
-    border: 1.5px solid rgba(255,255,255,0.18);
-    border-radius: var(--r);
-    color: #fff; font-size: 16px;
-    outline: none; transition: border-color .2s;
-  }
-  .login-input::placeholder { color: rgba(255,255,255,0.35); }
-  .login-input:focus { border-color: rgba(255,255,255,0.5); }
-  .login-btn {
-    padding: 16px; background: var(--accent);
-    border-radius: var(--r); color: #fff;
-    font-size: 16px; font-weight: 600; letter-spacing: .3px;
-    transition: transform .15s, opacity .15s;
-  }
-  .login-btn:active { transform: scale(0.97); opacity: .9; }
-  .login-error { color: #FFAA88; font-size: 13px; text-align: center; min-height: 18px; }
-
-  /* ── App Shell ─────────────────────────────────────────────────────── */
-  #app { display: none; min-height: 100dvh; padding-bottom: calc(var(--tab-h) + var(--safe-b) + 8px); }
-  #app.visible { display: block; }
-
-  /* ── Tab Bar ───────────────────────────────────────────────────────── */
-  .tab-bar {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 430px;
-    height: calc(var(--tab-h) + var(--safe-b));
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex; align-items: flex-start; padding-top: 8px;
-    padding-bottom: var(--safe-b);
-    z-index: 50;
-    box-shadow: 0 -4px 20px rgba(28,58,43,0.08);
-  }
-  .tab-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center;
-    gap: 3px; padding: 4px 0;
-    color: var(--muted); transition: color .2s;
-    font-size: 10px; font-weight: 500; letter-spacing: .3px;
-  }
-  .tab-btn .tab-icon { font-size: 22px; line-height: 1; }
-  .tab-btn.active { color: var(--green-mid); }
-  .tab-btn.active .tab-icon { filter: drop-shadow(0 0 6px rgba(44,95,46,0.4)); }
-
-  /* ── Screen ────────────────────────────────────────────────────────── */
-  .screen { display: none; animation: fadeUp .25s ease; }
-  .screen.active { display: block; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+  :root {
+    --cream:   #FAF7F2;
+    --ink:     #1C1208;
+    --accent:  #C5956C;
+    --blush:   #F2C4BB;
+    --muted:   #8C7B72;
+    --surface: #FFFFFF;
+    --border:  #EAE3DB;
+    --serif:   'Cormorant Garamond', Georgia, serif;
+    --sans:    'DM Sans', system-ui, sans-serif;
   }
 
-  /* ── Shared Header ─────────────────────────────────────────────────── */
-  .screen-header {
-    background: var(--green);
-    padding: 52px 24px 24px;
-    position: relative; overflow: hidden;
-  }
-  .screen-header::after {
+  html { scroll-behavior: smooth; }
+  body { background: var(--cream); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+
+  /* ── Noise overlay ── */
+  body::before {
     content: '';
-    position: absolute; bottom: -40px; right: -30px;
-    width: 160px; height: 160px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-  }
-  .header-eyebrow { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
-  .header-title { font-family: 'Fraunces', serif; font-size: 28px; color: #fff; letter-spacing: -.5px; }
-  .header-sub { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 2px; }
-
-  /* ── Cards ─────────────────────────────────────────────────────────── */
-  .card {
-    background: var(--surface);
-    border-radius: var(--r);
-    box-shadow: var(--shadow);
-    padding: 20px;
-    margin: 0 16px 12px;
-  }
-  .card-label {
-    font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.4;
   }
 
-  /* ── ═══════════════════════ INICIO TAB ═══════════════════════ ──── */
-
-  /* Pipeline bar */
-  .pipeline-wrap {
-    background: var(--green);
-    padding: 0 24px 20px;
-  }
-  .pipeline {
-    display: flex; align-items: center; gap: 0;
-  }
-  .pipeline-step {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  }
-  .pipeline-dot {
-    width: 44px; height: 44px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    transition: all .3s;
-  }
-  .pipeline-dot.done {
-    background: rgba(255,255,255,0.15);
-    box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
-  }
-  .pipeline-dot.done::after {
-    content: '✓';
-    position: absolute;
-    bottom: -2px; right: -2px;
-    background: var(--gold);
-    color: var(--green);
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    font-size: 9px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .pipeline-dot { position: relative; }
-  .pipeline-dot.active {
-    background: var(--accent);
-    box-shadow: 0 0 0 4px rgba(232,115,74,0.3), 0 4px 16px rgba(232,115,74,0.4);
-    animation: pulse-dot 2s ease-in-out infinite;
-  }
-  .pipeline-dot.pending {
-    background: rgba(255,255,255,0.08);
-    border: 2px dashed rgba(255,255,255,0.2);
-  }
-  @keyframes pulse-dot {
-    0%,100% { box-shadow: 0 0 0 4px rgba(232,115,74,0.3), 0 4px 16px rgba(232,115,74,0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(232,115,74,0.15), 0 4px 20px rgba(232,115,74,0.5); }
-  }
-  .pipeline-label { font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 500; }
-  .pipeline-label.active { color: #fff; font-weight: 600; }
-  .pipeline-connector {
-    flex: 0 0 24px; height: 2px;
-    background: rgba(255,255,255,0.15);
-    margin-bottom: 20px;
-  }
-  .pipeline-connector.done { background: rgba(255,255,255,0.4); }
-
-  /* Streak pill */
-  .streak-pill {
-    display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 100px; padding: 6px 14px 6px 10px;
-    width: fit-content; margin-left: auto;
-    margin-bottom: 16px;
-  }
-  .streak-flame { font-size: 18px; }
-  .streak-text { color: #fff; font-size: 13px; font-weight: 600; }
-  .streak-sub  { color: rgba(255,255,255,0.5); font-size: 11px; }
-
-  /* Next meal card */
-  .next-meal-card {
-    background: var(--surface);
-    border-radius: var(--r);
-    margin: 12px 16px 0;
-    padding: 20px 20px 16px;
-    position: relative; z-index: 2;
-    box-shadow: var(--shadow);
-  }
-  .next-meal-tag {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent); color: #fff;
-    border-radius: 100px; padding: 4px 12px;
-    font-size: 11px; font-weight: 600; letter-spacing: .5px;
-    text-transform: uppercase; margin-bottom: 12px;
-  }
-  .next-meal-name {
-    font-family: 'Fraunces', serif;
-    font-size: 32px; letter-spacing: -1px; line-height: 1;
-    margin-bottom: 4px;
-  }
-  .next-meal-time { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
-
-  /* Food group chips */
-  .group-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-  }
-  .group-chip {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--bg); border-radius: var(--r-sm);
-    padding: 10px 12px; border: 1.5px solid var(--border);
-    transition: border-color .2s, background .2s;
-  }
-  .group-chip.done { background: #EAF4EB; border-color: #A8D5AC; }
-  .group-chip.over { background: #FFF3F0; border-color: #FFBCA8; }
-  .group-chip-icon { font-size: 20px; flex-shrink: 0; }
-  .group-chip-info { flex: 1; min-width: 0; }
-  .group-chip-name { font-size: 11px; font-weight: 600; color: var(--text2); }
-  .group-chip-count {
-    font-family: 'Fraunces', serif;
-    font-size: 18px; color: var(--text); line-height: 1;
-  }
-  .group-chip-count span { font-size: 11px; color: var(--muted); font-family: 'DM Sans', sans-serif; }
-  .group-chip-check { font-size: 16px; }
-
-  /* Log button */
-  .log-btn {
-    width: 100%; padding: 16px;
-    background: var(--green);
-    color: #fff; border-radius: var(--r);
-    font-size: 16px; font-weight: 600;
-    margin-top: 16px;
-    transition: transform .15s, opacity .15s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .log-btn:active { transform: scale(0.98); opacity: .9; }
-  .log-btn.completed { background: var(--gold); color: var(--green); }
-
-  /* Meal selector tabs */
-  .meal-tabs {
-    display: flex; gap: 8px; padding: 16px 16px 0;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  .meal-tabs::-webkit-scrollbar { display: none; }
-  .meal-tab {
-    flex-shrink: 0; padding: 8px 14px;
-    border-radius: 100px;
-    font-size: 12px; font-weight: 600;
-    background: var(--bg2); color: var(--muted);
-    border: 1.5px solid transparent;
-    transition: all .2s;
-  }
-  .meal-tab.active {
-    background: var(--green); color: #fff;
-  }
-  .meal-tab.done-tab { border-color: var(--green-lt); color: var(--green-lt); background: #EAF4EB; }
-
-  /* Today summary strip */
-  .today-compliance {
-    margin: 12px 16px 12px;
-    background: var(--green);
-    border-radius: var(--r);
-    padding: 16px 20px;
-    display: flex; align-items: center; gap: 16px;
-    color: #fff;
-  }
-  .compliance-ring {
-    width: 56px; height: 56px; flex-shrink: 0;
-    position: relative;
-  }
-  .compliance-ring svg { transform: rotate(-90deg); }
-  .compliance-ring .ring-pct {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Fraunces', serif;
-    font-size: 15px; font-weight: 700; color: #fff;
-  }
-  .compliance-info { flex: 1; }
-  .compliance-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 2px; }
-  .compliance-val { font-family: 'Fraunces', serif; font-size: 20px; }
-  .compliance-sub { font-size: 11px; color: rgba(255,255,255,0.5); }
-
-  /* ── ═══════════════════════ REGISTRAR TAB ═══════════════════════ ── */
-  .reg-wrap { padding: 16px 16px 0; }
-
-  /* Meal type selector */
-  .meal-type-row {
-    display: flex; gap: 8px; margin-bottom: 16px;
-  }
-  .meal-type-btn {
-    flex: 1; padding: 12px 8px;
-    border-radius: var(--r-sm);
-    background: var(--bg2);
-    border: 2px solid transparent;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    transition: all .2s;
-  }
-  .meal-type-btn .mt-icon { font-size: 24px; }
-  .meal-type-btn .mt-label { font-size: 10px; font-weight: 600; color: var(--muted); }
-  .meal-type-btn.selected { background: var(--green); border-color: var(--green-lt); }
-  .meal-type-btn.selected .mt-label { color: rgba(255,255,255,0.7); }
-  .meal-type-btn.locked { opacity: .45; cursor: not-allowed; }
-  .meal-type-btn.done-m { background: #EAF4EB; border-color: #A8D5AC; }
-  .meal-type-btn.done-m .mt-label { color: var(--green-mid); }
-
-  /* Input method cards */
-  .input-methods {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-    margin-bottom: 16px;
-  }
-  .input-card {
-    background: var(--surface); border-radius: var(--r);
-    border: 2px solid var(--border);
-    padding: 18px 14px; text-align: center;
-    box-shadow: var(--shadow);
-    transition: all .2s; cursor: pointer;
-  }
-  .input-card:active { transform: scale(0.97); }
-  .input-card.selected { border-color: var(--accent); background: #FFF4EF; }
-  .input-card-icon { font-size: 32px; margin-bottom: 8px; display: block; }
-  .input-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .input-card-sub { font-size: 11px; color: var(--muted); }
-
-  /* Input area */
-  .input-area { background: var(--surface); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
-  .input-area-inner { padding: 16px; }
-
-  /* Image preview */
-  .img-preview-wrap {
-    width: 100%; aspect-ratio: 4/3;
-    background: var(--bg2); border-radius: var(--r-sm);
-    overflow: hidden; position: relative; margin-bottom: 12px;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px dashed var(--border);
-  }
-  .img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
-  .img-preview-placeholder { text-align: center; color: var(--muted); }
-  .img-preview-placeholder span { font-size: 40px; display: block; margin-bottom: 8px; }
-  .img-preview-placeholder p { font-size: 12px; }
-  .img-btn {
-    width: 100%; padding: 14px;
-    border-radius: var(--r-sm);
-    background: var(--green); color: #fff;
-    font-size: 14px; font-weight: 600;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: opacity .2s;
-  }
-  .img-btn:active { opacity: .85; }
-  .img-btn.secondary { background: var(--bg2); color: var(--text); margin-top: 8px; }
-
-  /* Voice recorder */
-  .voice-recorder { text-align: center; padding: 8px 0; }
-  .record-btn {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: var(--accent); color: #fff;
-    font-size: 32px; margin: 0 auto 12px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(232,115,74,0.4);
-    transition: all .2s;
-  }
-  .record-btn.recording {
-    background: var(--red);
-    animation: record-pulse 1s ease-in-out infinite;
-    box-shadow: 0 4px 20px rgba(192,57,43,0.5);
-  }
-  .record-btn:active { transform: scale(0.95); }
-  @keyframes record-pulse {
-    0%,100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
-  }
-  .record-status { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-  .record-timer { font-family: 'Fraunces', serif; font-size: 32px; color: var(--text); }
-  .transcript-box {
-    background: var(--bg); border-radius: var(--r-sm);
-    border: 1px solid var(--border); padding: 12px;
-    font-size: 13px; color: var(--text2); line-height: 1.5;
-    min-height: 60px; margin-top: 12px;
-    font-style: italic;
-  }
-
-  /* Manual text input */
-  .text-input-area {
-    width: 100%; min-height: 100px; padding: 14px;
-    border: 1.5px solid var(--border); border-radius: var(--r-sm);
-    font-size: 14px; color: var(--text); background: var(--bg);
-    resize: none; outline: none; transition: border-color .2s;
-  }
-  .text-input-area:focus { border-color: var(--green-lt); }
-  .text-input-area::placeholder { color: var(--muted); }
-
-  /* Analyze button */
-  .analyze-btn {
-    width: 100%; padding: 15px;
-    background: var(--accent); color: #fff;
-    border-radius: var(--r-sm); font-size: 15px; font-weight: 600;
-    margin-top: 12px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: opacity .2s, transform .15s;
-  }
-  .analyze-btn:active { opacity: .9; transform: scale(0.98); }
-  .analyze-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
-
-  /* Analysis result */
-  .analysis-result {
-    background: var(--surface); border-radius: var(--r);
-    box-shadow: var(--shadow); margin-top: 12px; overflow: hidden;
-  }
-  .analysis-header {
-    background: var(--bg2); padding: 14px 16px;
+  /* ── Nav ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 48px;
+    transition: background 0.4s, padding 0.4s, box-shadow 0.4s;
   }
-  .analysis-title { font-size: 13px; font-weight: 600; }
-  .confidence-badge {
-    font-size: 10px; font-weight: 700; letter-spacing: .5px;
-    text-transform: uppercase; padding: 3px 8px; border-radius: 100px;
+  nav.scrolled {
+    background: rgba(250,247,242,0.94); backdrop-filter: blur(12px);
+    padding: 16px 48px; box-shadow: 0 1px 0 var(--border);
   }
-  .confidence-badge.alta { background: #D4EDDA; color: #1C5E2A; }
-  .confidence-badge.media { background: #FFF3CD; color: #856404; }
-  .confidence-badge.baja { background: #F8D7DA; color: #842029; }
-  .portions-editor { padding: 14px 16px; }
-  .portion-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 0; border-bottom: 1px solid var(--border);
+  .nav-logo {
+    font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: 0.05em;
+    color: var(--ink); text-decoration: none;
   }
-  .portion-row:last-child { border-bottom: none; }
-  .portion-icon { font-size: 20px; width: 28px; text-align: center; }
-  .portion-label { flex: 1; font-size: 13px; font-weight: 500; }
-  .portion-stepper { display: flex; align-items: center; gap: 10px; }
-  .stepper-btn {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: var(--bg2); color: var(--text);
-    font-size: 18px; display: flex; align-items: center; justify-content: center;
-    transition: background .15s;
+  .nav-links { display: flex; align-items: center; gap: 36px; }
+  .nav-links a {
+    font-family: var(--sans); font-size: 13px; font-weight: 400; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--ink); text-decoration: none;
+    opacity: 0.7; transition: opacity 0.2s;
   }
-  .stepper-btn:active { background: var(--border); }
-  .stepper-val {
-    font-family: 'Fraunces', serif;
-    font-size: 20px; width: 28px; text-align: center;
+  .nav-links a:hover { opacity: 1; }
+  .nav-cta {
+    background: var(--ink); color: var(--cream) !important;
+    padding: 10px 22px; border-radius: 2px; opacity: 1 !important;
+    transition: background 0.2s, transform 0.15s !important;
   }
-  .stepper-plan { font-size: 10px; color: var(--muted); text-align: center; }
+  .nav-cta:hover { background: var(--accent) !important; }
+  .nav-burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .nav-burger span { width: 24px; height: 1.5px; background: var(--ink); transition: transform 0.3s, opacity 0.3s; display: block; }
+  .mobile-menu {
+    display: none; position: fixed; inset: 0; z-index: 99; background: var(--cream);
+    flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+  }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { font-family: var(--serif); font-size: 32px; font-weight: 300; color: var(--ink); text-decoration: none; }
+  .mobile-close { position: absolute; top: 28px; right: 32px; font-size: 28px; cursor: pointer; background: none; border: none; color: var(--ink); }
 
-  /* Save button */
-  .save-btn {
-    width: 100%; padding: 16px;
-    background: var(--green); color: #fff;
-    border-radius: var(--r); font-size: 16px; font-weight: 600;
-    margin-top: 12px;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 16px rgba(28,58,43,0.25);
-    transition: transform .15s, opacity .15s;
+  /* ── Hero ── */
+  .hero {
+    min-height: 100vh; display: flex; align-items: flex-end;
+    padding: 0 48px 80px; position: relative; overflow: hidden;
   }
-  .save-btn:active { transform: scale(0.98); opacity: .9; }
-
-  /* Loading spinner */
-  .spinner {
-    width: 20px; height: 20px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    animation: spin .7s linear infinite;
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse 80% 70% at 70% 40%, #F5E8DA 0%, var(--cream) 60%);
+  }
+  .hero-blob {
+    position: absolute; right: -80px; top: 50%; transform: translateY(-50%);
+    width: 55vw; max-width: 720px; aspect-ratio: 1;
+    background: radial-gradient(circle at 40% 50%, #FDDFD7 0%, #F5E0CD 40%, transparent 70%);
+    border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%;
+    animation: morphBlob 12s ease-in-out infinite;
+  }
+  @keyframes morphBlob {
+    0%, 100% { border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%; }
+    33% { border-radius: 40% 60% 30% 70% / 60% 40% 55% 45%; }
+    66% { border-radius: 70% 30% 50% 50% / 40% 60% 40% 60%; }
+  }
+  .hero-content { position: relative; z-index: 1; max-width: 700px; }
+  .hero-eyebrow {
+    font-family: var(--sans); font-size: 12px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 20px;
+    opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
+  }
+  .hero-title {
+    font-family: var(--serif); font-size: clamp(54px, 8vw, 110px);
+    font-weight: 300; line-height: 1.0; color: var(--ink);
+    margin-bottom: 28px;
+    opacity: 0; animation: fadeUp 0.9s 0.35s forwards;
+  }
+  .hero-title em { font-style: italic; color: var(--accent); }
+  .hero-desc {
+    font-family: var(--sans); font-size: 17px; font-weight: 300; color: var(--muted);
+    max-width: 420px; line-height: 1.7; margin-bottom: 44px;
+    opacity: 0; animation: fadeUp 0.9s 0.5s forwards;
+  }
+  .hero-actions {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp 0.9s 0.65s forwards;
+  }
+  .btn-primary {
+    background: var(--ink); color: var(--cream);
+    padding: 15px 36px; font-family: var(--sans); font-size: 13px;
+    font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+    text-decoration: none; border-radius: 2px; border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
     display: inline-block;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-primary:hover { background: var(--accent); transform: translateY(-1px); }
+  .btn-secondary {
+    border: 1px solid rgba(28,18,8,0.25); color: var(--ink);
+    padding: 15px 36px; font-family: var(--sans); font-size: 13px;
+    font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+    text-decoration: none; border-radius: 2px; background: transparent;
+    transition: border-color 0.2s, color 0.2s;
+    display: inline-block;
+  }
+  .btn-secondary:hover { border-color: var(--ink); }
+  .hero-scroll {
+    position: absolute; bottom: 32px; right: 48px; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-family: var(--sans); font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    animation: fadeIn 1s 1.2s both;
+  }
+  .hero-scroll-line {
+    width: 1px; height: 40px; background: linear-gradient(to bottom, var(--muted), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse { 0%, 100% { opacity: 0.4; transform: scaleY(1); } 50% { opacity: 1; transform: scaleY(0.7); } }
 
-  /* ── ═══════════════════════ PROGRESO TAB ═══════════════════════ ─── */
-  .prog-wrap { padding: 16px 16px 0; }
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  /* Period tabs */
-  .period-tabs {
-    display: flex; gap: 6px; margin-bottom: 16px;
-    background: var(--bg2); border-radius: 100px; padding: 4px;
+  /* ── Section shared ── */
+  .section { padding: 100px 48px; position: relative; }
+  .section-label {
+    font-family: var(--sans); font-size: 11px; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
   }
-  .period-tab {
-    flex: 1; padding: 8px;
-    border-radius: 100px; font-size: 12px; font-weight: 600;
-    color: var(--muted); transition: all .2s; text-align: center;
+  .section-title {
+    font-family: var(--serif); font-size: clamp(38px, 5vw, 64px);
+    font-weight: 300; line-height: 1.1; color: var(--ink);
+    margin-bottom: 20px;
   }
-  .period-tab.active { background: var(--surface); color: var(--green); box-shadow: var(--shadow); }
+  .section-title em { font-style: italic; }
+  .section-subtitle {
+    font-family: var(--sans); font-size: 16px; font-weight: 300;
+    color: var(--muted); max-width: 440px; line-height: 1.7;
+  }
 
-  /* Streak card */
-  .streak-card {
-    background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
-    border-radius: var(--r); padding: 20px;
-    margin-bottom: 12px; color: #fff; position: relative; overflow: hidden;
+  /* ── About strip ── */
+  .about-section {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
   }
-  .streak-card::before {
-    content: '🔥';
-    position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
-    font-size: 64px; opacity: .15;
+  .about-image-wrap {
+    position: relative; aspect-ratio: 4/5; border-radius: 3px; overflow: hidden;
+    background: linear-gradient(135deg, #F5E0D0, #FDDFD7);
   }
-  .streak-card-label { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
-  .streak-card-num {
-    font-family: 'Fraunces', serif;
-    font-size: 56px; letter-spacing: -2px; line-height: 1;
-    margin-bottom: 2px;
+  .about-image-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .about-image-placeholder {
+    width: 100%; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    color: var(--muted); font-family: var(--serif); font-size: 18px; font-style: italic;
   }
-  .streak-card-sub { font-size: 13px; color: rgba(255,255,255,0.6); }
-  .streak-badges { display: flex; gap: 12px; margin-top: 16px; }
-  .streak-badge-item {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  .about-image-placeholder svg { opacity: 0.4; }
+  .about-tag {
+    position: absolute; bottom: 32px; left: -24px;
+    background: var(--surface); padding: 16px 24px; border-radius: 2px;
+    box-shadow: 0 8px 32px rgba(28,18,8,0.1);
   }
-  .streak-badge-val { font-family: 'Fraunces', serif; font-size: 20px; }
-  .streak-badge-lbl { font-size: 10px; color: rgba(255,255,255,0.5); }
+  .about-tag-num { font-family: var(--serif); font-size: 36px; font-weight: 500; color: var(--ink); }
+  .about-tag-text { font-family: var(--sans); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .about-text p { font-family: var(--sans); font-size: 16px; font-weight: 300; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+  .about-text p:last-child { margin-bottom: 0; }
 
-  /* Week chart */
-  .week-chart { background: var(--surface); border-radius: var(--r); padding: 16px 20px; margin-bottom: 12px; box-shadow: var(--shadow); }
-  .week-chart-title { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
-  .week-bars { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
-  .week-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
-  .week-bar {
-    width: 100%; border-radius: 6px 6px 0 0;
-    background: var(--border); position: relative; min-height: 4px;
-    transition: height .4s cubic-bezier(.34,1.56,.64,1);
+  /* ── Offerings ── */
+  .offerings-section { background: var(--ink); color: var(--cream); }
+  .offerings-section .section-title { color: var(--cream); }
+  .offerings-section .section-label { color: var(--blush); opacity: 0.8; }
+  .offerings-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 60px; }
+  .offerings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(255,255,255,0.08); }
+  .offering-card {
+    background: var(--ink); padding: 44px 36px;
+    transition: background 0.3s; cursor: default;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column;
   }
-  .week-bar.filled { background: var(--green-lt); }
-  .week-bar.perfect { background: var(--green); }
-  .week-bar.today { background: var(--accent); }
-  .week-bar-pct { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; font-weight: 600; color: var(--text2); white-space: nowrap; }
-  .week-bar-day { font-size: 10px; color: var(--muted); font-weight: 500; }
-  .week-bar-day.today { color: var(--accent); font-weight: 700; }
+  .offering-card:hover { background: rgba(197,149,108,0.15); }
+  .offering-icon { font-size: 28px; margin-bottom: 24px; }
+  .offering-name {
+    font-family: var(--serif); font-size: 26px; font-weight: 300;
+    color: var(--cream); margin-bottom: 12px; line-height: 1.2;
+  }
+  .offering-desc {
+    font-family: var(--sans); font-size: 14px; font-weight: 300;
+    color: rgba(250,247,242,0.55); line-height: 1.7; flex: 1; margin-bottom: 28px;
+  }
+  .offering-price {
+    font-family: var(--serif); font-size: 18px; color: var(--blush); font-style: italic;
+  }
+  .offering-link {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+    font-family: var(--sans); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: rgba(250,247,242,0.5); text-decoration: none;
+    transition: color 0.2s, gap 0.2s;
+  }
+  .offering-link:hover { color: var(--blush); gap: 12px; }
 
-  /* Group progress bars */
-  .group-progress { background: var(--surface); border-radius: var(--r); padding: 16px 20px; box-shadow: var(--shadow); margin-bottom: 12px; }
-  .gp-row { margin-bottom: 14px; }
-  .gp-row:last-child { margin-bottom: 0; }
-  .gp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .gp-name { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-  .gp-count { font-size: 11px; color: var(--muted); }
-  .gp-bar { height: 8px; background: var(--bg2); border-radius: 100px; overflow: hidden; }
-  .gp-fill {
-    height: 100%; border-radius: 100px;
-    background: var(--green-lt);
-    transition: width .5s cubic-bezier(.34,1.56,.64,1);
+  /* ── How it works ── */
+  .steps-section { border-top: 1px solid var(--border); }
+  .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 60px; margin-top: 64px; }
+  .step { display: flex; flex-direction: column; }
+  .step-num {
+    font-family: var(--serif); font-size: 72px; font-weight: 300;
+    color: var(--border); line-height: 1; margin-bottom: 20px;
+    transition: color 0.3s;
   }
-  .gp-fill.over { background: var(--accent); }
-  .gp-fill.perfect { background: var(--gold); }
+  .step:hover .step-num { color: var(--accent); }
+  .step-title {
+    font-family: var(--serif); font-size: 22px; font-weight: 400;
+    color: var(--ink); margin-bottom: 10px;
+  }
+  .step-desc { font-family: var(--sans); font-size: 15px; font-weight: 300; color: var(--muted); line-height: 1.7; }
+  .step-connector { display: none; }
 
-  /* History list */
-  .history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .history-item {
-    background: var(--surface); border-radius: var(--r-sm);
-    padding: 14px 16px; box-shadow: var(--shadow);
-    display: flex; align-items: flex-start; gap: 12px;
+  /* ── Flavours showcase ── */
+  .flavours-section { overflow: hidden; padding: 80px 0; }
+  .flavours-title-wrap { padding: 0 48px; margin-bottom: 40px; }
+  .flavours-track {
+    display: flex; gap: 12px;
+    animation: tickerScroll 30s linear infinite;
+    width: max-content;
   }
-  .history-icon {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--bg2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
+  .flavours-track:hover { animation-play-state: paused; }
+  @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .flavour-pill {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 12px 24px; border-radius: 60px; white-space: nowrap;
+    font-family: var(--serif); font-size: 18px; font-style: italic; font-weight: 300;
+    color: var(--ink); transition: background 0.2s, border-color 0.2s;
+    cursor: default;
   }
-  .history-content { flex: 1; min-width: 0; }
-  .history-meal { font-size: 13px; font-weight: 600; }
-  .history-desc { font-size: 11px; color: var(--muted); margin: 2px 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .history-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-  .history-chip { font-size: 10px; background: var(--bg2); color: var(--text2); padding: 2px 7px; border-radius: 100px; }
-  .history-time { font-size: 11px; color: var(--muted); flex-shrink: 0; }
-  .history-delete { background: none; font-size: 18px; color: var(--muted); padding: 2px; }
+  .flavour-pill:hover { background: var(--blush); border-color: var(--blush); }
+  .flavour-pill.accent { background: var(--accent); border-color: var(--accent); color: white; font-style: normal; }
 
-  /* Toast */
-  .toast {
-    position: fixed; bottom: calc(var(--tab-h) + var(--safe-b) + 16px);
-    left: 50%; transform: translateX(-50%) translateY(20px);
-    background: var(--text); color: #fff;
-    padding: 10px 20px; border-radius: 100px;
-    font-size: 13px; font-weight: 500;
-    z-index: 200; opacity: 0; transition: all .3s;
-    white-space: nowrap; pointer-events: none;
-    max-width: calc(100% - 32px); text-align: center;
+  /* ── Instagram strip ── */
+  .instagram-strip {
+    background: linear-gradient(135deg, #F5E0D0 0%, #FDDFD7 50%, #F2C4BB 100%);
+    padding: 80px 48px; display: flex; align-items: center; justify-content: space-between; gap: 40px;
   }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.success { background: var(--green-mid); }
-  .toast.error   { background: var(--red); }
+  .instagram-text { }
+  .instagram-handle {
+    font-family: var(--serif); font-size: clamp(28px, 4vw, 48px);
+    font-weight: 300; color: var(--ink); margin-bottom: 12px;
+  }
+  .instagram-handle em { font-style: italic; color: var(--accent); }
+  .instagram-sub { font-family: var(--sans); font-size: 15px; font-weight: 300; color: var(--muted); }
+  .instagram-btn {
+    flex-shrink: 0; background: var(--ink); color: var(--cream);
+    padding: 15px 36px; font-family: var(--sans); font-size: 13px;
+    font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase;
+    text-decoration: none; border-radius: 2px; white-space: nowrap;
+    transition: background 0.2s, transform 0.15s; display: inline-block;
+  }
+  .instagram-btn:hover { background: var(--accent); transform: translateY(-1px); }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 150;
-    background: rgba(28,58,43,0.6); backdrop-filter: blur(4px);
-    display: flex; align-items: flex-end; justify-content: center;
-    opacity: 0; pointer-events: none; transition: opacity .3s;
+  /* ── Footer ── */
+  footer {
+    background: var(--ink); color: var(--cream);
+    padding: 60px 48px 32px;
   }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal-sheet {
-    background: var(--surface); border-radius: var(--r) var(--r) 0 0;
-    padding: 20px 20px calc(20px + var(--safe-b));
-    width: 100%; max-width: 430px;
-    transform: translateY(100%); transition: transform .3s cubic-bezier(.34,1.1,.64,1);
+  .footer-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; margin-bottom: 48px; }
+  .footer-brand { }
+  .footer-logo { font-family: var(--serif); font-size: 26px; font-weight: 300; color: var(--cream); margin-bottom: 10px; }
+  .footer-tagline { font-family: var(--sans); font-size: 13px; font-weight: 300; color: rgba(250,247,242,0.45); }
+  .footer-links { display: flex; gap: 60px; }
+  .footer-col-title {
+    font-family: var(--sans); font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: rgba(250,247,242,0.35); margin-bottom: 16px;
   }
-  .modal-overlay.open .modal-sheet { transform: translateY(0); }
-  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 100px; margin: 0 auto 20px; }
-  .modal-title { font-family: 'Fraunces', serif; font-size: 22px; margin-bottom: 8px; }
-  .modal-text { font-size: 14px; color: var(--text2); line-height: 1.5; margin-bottom: 20px; }
-  .modal-actions { display: flex; gap: 10px; }
-  .modal-cancel { flex: 1; padding: 14px; background: var(--bg2); border-radius: var(--r-sm); font-size: 14px; font-weight: 600; color: var(--muted); }
-  .modal-confirm { flex: 1; padding: 14px; background: var(--red); border-radius: var(--r-sm); font-size: 14px; font-weight: 600; color: #fff; }
+  .footer-col a {
+    display: block; font-family: var(--sans); font-size: 14px; font-weight: 300;
+    color: rgba(250,247,242,0.65); text-decoration: none; margin-bottom: 10px;
+    transition: color 0.2s;
+  }
+  .footer-col a:hover { color: var(--cream); }
+  .footer-bottom {
+    border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .footer-legal { font-family: var(--sans); font-size: 12px; font-weight: 300; color: rgba(250,247,242,0.3); }
+  .footer-social { display: flex; gap: 20px; }
+  .footer-social a {
+    font-family: var(--sans); font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(250,247,242,0.4); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-social a:hover { color: var(--blush); }
 
-  /* Completed day banner */
-  .completed-banner {
-    background: linear-gradient(135deg, #1C3A2B, #2C5F2E);
-    border-radius: var(--r); padding: 20px;
-    text-align: center; color: #fff; margin: 0 0 12px;
-  }
-  .completed-banner .check-circle {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--gold); margin: 0 auto 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px;
-  }
-  .completed-banner h3 { font-family: 'Fraunces', serif; font-size: 22px; margin-bottom: 4px; }
-  .completed-banner p { font-size: 13px; color: rgba(255,255,255,0.6); }
+  /* ── Scroll reveal ── */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* Utility */
-  .hidden { display: none !important; }
-  .mt-8  { margin-top: 8px; }
-  .mt-12 { margin-top: 12px; }
-  .section-pad { padding: 16px 0 0; }
-  .empty-state { text-align: center; padding: 32px 20px; color: var(--muted); }
-  .empty-state span { font-size: 40px; display: block; margin-bottom: 8px; }
-  .empty-state p { font-size: 13px; }
-
-  /* ── Recipe suggestion ── */
-  .recipe-hint-btn {
-    width: 100%; margin-top: 10px; padding: 10px 16px;
-    border-radius: var(--r-sm); border: 1.5px solid var(--border);
-    background: var(--bg); color: var(--text2);
-    font-size: 13px; font-weight: 500;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: background .2s, border-color .2s;
+  /* ── Mobile ── */
+  @media (max-width: 900px) {
+    nav { padding: 20px 24px; }
+    nav.scrolled { padding: 14px 24px; }
+    .nav-links { display: none; }
+    .nav-burger { display: flex; }
+    .hero { padding: 0 24px 60px; }
+    .hero-blob { display: none; }
+    .section { padding: 72px 24px; }
+    .about-section { grid-template-columns: 1fr; }
+    .about-image-wrap { max-height: 340px; }
+    .about-tag { left: 16px; }
+    .offerings-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .offerings-grid { grid-template-columns: 1fr 1fr; }
+    .steps-grid { grid-template-columns: 1fr; gap: 40px; }
+    .flavours-title-wrap { padding: 0 24px; }
+    .instagram-strip { padding: 60px 24px; flex-direction: column; }
+    .footer-inner { flex-direction: column; }
+    .footer-links { flex-wrap: wrap; gap: 32px; }
+    footer { padding: 48px 24px 24px; }
+    .footer-bottom { flex-direction: column; align-items: flex-start; }
   }
-  .recipe-hint-btn:active { background: var(--bg2); border-color: var(--green-lt); }
-  .recipe-hint-btn.loading { opacity: .6; pointer-events: none; }
-  .recipe-modal-scroll { max-height: 72dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .recipe-modal-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-  .recipe-modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
-  .recipe-card { border: 1.5px solid var(--border); border-radius: var(--r-sm); margin-bottom: 8px; overflow: hidden; transition: border-color .2s; }
-  .recipe-card.open { border-color: var(--green-lt); }
-  .recipe-card-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 14px; cursor: pointer; user-select: none; background: var(--surface); }
-  .recipe-card-header:active { background: var(--bg); }
-  .recipe-card-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
-  .recipe-card-chevron { font-size: 12px; color: var(--muted); transition: transform .2s; }
-  .recipe-card.open .recipe-card-chevron { transform: rotate(180deg); }
-  .recipe-card-body { display: none; padding: 0 14px 14px; background: var(--surface); }
-  .recipe-card.open .recipe-card-body { display: block; }
-  .recipe-ingredient { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
-  .recipe-ingredient:last-child { border-bottom: none; }
-  .recipe-ingredient-icon { font-size: 17px; width: 22px; flex-shrink: 0; }
-  .recipe-ingredient-name { flex: 1; font-size: 13px; font-weight: 500; }
-  .recipe-ingredient-amount { font-size: 12px; color: var(--muted); }
-  .recipe-steps-list { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; margin-top: 14px; }
-  .recipe-step { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.5; color: var(--text2); }
-  .recipe-step-num { flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%; background: var(--green); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
-  .recipe-section-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 12px 0 8px; }
-  .recipe-notes { margin-top: 12px; padding: 9px 11px; background: var(--bg2); border-radius: var(--r-sm); font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-  /* ── Equivalencias ── */
-  .eq-search-wrap { margin-bottom: 12px; }
-  .eq-search {
-    width: 100%; padding: 11px 14px; border-radius: 12px;
-    border: 1.5px solid var(--border); background: var(--surface);
-    font-size: 15px; color: var(--text); outline: none;
-    box-sizing: border-box;
+  @media (max-width: 600px) {
+    .offerings-grid { grid-template-columns: 1fr; }
   }
-  .eq-search:focus { border-color: var(--green); }
-  .eq-group-chips {
-    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
-    scrollbar-width: none; margin-bottom: 14px;
-  }
-  .eq-group-chips::-webkit-scrollbar { display: none; }
-  .eq-chip {
-    flex-shrink: 0; padding: 6px 12px; border-radius: 20px; font-size: 12px;
-    font-weight: 600; border: 1.5px solid var(--border);
-    background: var(--surface); color: var(--muted); cursor: pointer;
-  }
-  .eq-chip.active { background: var(--green); border-color: var(--green); color: #fff; }
-  .eq-list { display: flex; flex-direction: column; gap: 2px; }
-  .eq-group-header {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
-    text-transform: uppercase; color: var(--green); padding: 16px 0 6px;
-  }
-  .eq-item {
-    background: var(--surface); border-radius: 10px;
-    padding: 11px 14px; border: 1px solid var(--border);
-  }
-  .eq-item-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .eq-item-detail { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .eq-portion { font-size: 13px; color: var(--green); font-weight: 700; }
-  .eq-notes { font-size: 12px; color: var(--muted); }
-  .eq-gi-badge {
-    font-size: 10px; font-weight: 600; padding: 2px 7px;
-    border-radius: 10px; letter-spacing: 0.3px;
-  }
-  .week-bar.future { background: var(--border); opacity: 0.5; }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════ LOGIN ═══════════════════ -->
-<div id="login-screen">
-  <div class="login-leaf"><span>🌿</span></div>
-  <h1 class="login-title">MediTrack</h1>
-  <p class="login-sub">Plan de alimentación · Héctor</p>
-  <form class="login-form" onsubmit="doLogin(event)">
-    <input class="login-input" type="password" id="login-pwd" placeholder="Contraseña" autocomplete="current-password" required>
-    <button class="login-btn" type="submit">Entrar</button>
-    <p class="login-error" id="login-err"></p>
-  </form>
+<!-- Nav -->
+<nav id="nav">
+  <a href="index.html" class="nav-logo">Petit Demi</a>
+  <div class="nav-links">
+    <a href="menu.html">Menu</a>
+    <a href="menu.html#flavours">Flavours</a>
+    <a href="index.html#about">About</a>
+    <a href="https://www.instagram.com/petit.demi/" target="_blank" rel="noopener">Instagram</a>
+    <a href="cotizar.html" class="nav-cta">Order a Cake</a>
+  </div>
+  <div class="nav-burger" id="burger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="mobile-close" onclick="toggleMenu()">✕</button>
+  <a href="menu.html" onclick="toggleMenu()">Menu</a>
+  <a href="index.html#about" onclick="toggleMenu()">About</a>
+  <a href="https://www.instagram.com/petit.demi/" target="_blank" onclick="toggleMenu()">Instagram</a>
+  <a href="cotizar.html" onclick="toggleMenu()">Order a Cake</a>
 </div>
 
-<!-- ═══════════════════ APP ══════════════════════ -->
-<div id="app">
-
-  <!-- INICIO -->
-  <div class="screen active" id="screen-inicio">
-    <div class="screen-header">
-      <p class="header-eyebrow" id="today-date-label">Hoy, lunes</p>
-      <h1 class="header-title">Buenos días, Héctor</h1>
-      <p class="header-sub" id="header-sub-text">Veamos cómo va tu día</p>
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-blob"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Custom cakes · Amsterdam</p>
+    <h1 class="hero-title">Hi,<br>I'm <em>Demi.</em></h1>
+    <p class="hero-desc">I bake custom celebration cakes, cupcakes, and sweet treats from my home kitchen in Amsterdam. Every order is made with love — and a lot of butter.</p>
+    <div class="hero-actions">
+      <a href="cotizar.html" class="btn-primary">Order a Cake</a>
+      <a href="menu.html" class="btn-secondary">See the Menu</a>
     </div>
+  </div>
+  <div class="hero-scroll">
+    <div class="hero-scroll-line"></div>
+    <span>scroll</span>
+  </div>
+</section>
 
-    <div class="pipeline-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <p style="font-size:11px;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase">Tu progreso</p>
-        <div class="streak-pill" id="streak-pill">
-          <span class="streak-flame">🔥</span>
-          <div><div class="streak-text" id="streak-num">0 días</div><div class="streak-sub">racha</div></div>
-        </div>
-      </div>
-      <div class="pipeline" id="pipeline">
-        <div class="pipeline-step">
-          <div class="pipeline-dot pending" id="pdot-desayuno">🌅</div>
-          <div class="pipeline-label" id="plabel-desayuno">Desayuno</div>
-        </div>
-        <div class="pipeline-connector" id="pcon-1"></div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot pending" id="pdot-comida">☀️</div>
-          <div class="pipeline-label" id="plabel-comida">Comida</div>
-        </div>
-        <div class="pipeline-connector" id="pcon-2"></div>
-        <div class="pipeline-step">
-          <div class="pipeline-dot pending" id="pdot-cena">🌙</div>
-          <div class="pipeline-label" id="plabel-cena">Cena</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Meal detail tabs -->
-    <div class="meal-tabs" id="inicio-meal-tabs">
-      <button class="meal-tab active" onclick="selectViewMeal('desayuno')" id="itab-desayuno">🌅 Desayuno</button>
-      <button class="meal-tab" onclick="selectViewMeal('comida')" id="itab-comida">☀️ Comida</button>
-      <button class="meal-tab" onclick="selectViewMeal('cena')" id="itab-cena">🌙 Cena</button>
-      <button class="meal-tab" onclick="selectViewMeal('colacion')" id="itab-colacion">🍎 Colación</button>
-    </div>
-
-    <div class="next-meal-card" id="next-meal-card">
-      <div id="next-meal-tag-wrap">
-        <span class="next-meal-tag" id="next-meal-tag">⬆ Siguiente</span>
-      </div>
-      <h2 class="next-meal-name" id="view-meal-name">Desayuno</h2>
-      <p class="next-meal-time" id="view-meal-time">7:00 – 10:00 am</p>
-
-      <div class="group-grid" id="group-grid"></div>
-      <div id="recipe-btn-wrap"></div>
-
-      <button class="log-btn" id="log-btn" onclick="goToRegister()">
-        <span>➕</span> Registrar Desayuno
-      </button>
-    </div>
-
-    <div class="today-compliance card" id="today-compliance-card" style="display:none">
-      <div class="compliance-ring">
-        <svg width="56" height="56" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
-          <circle cx="28" cy="28" r="22" fill="none" stroke="#F5C842" stroke-width="5"
-            stroke-dasharray="138.2" stroke-dashoffset="138.2"
-            stroke-linecap="round" id="compliance-circle" style="transition:stroke-dashoffset .6s ease"/>
+<!-- About -->
+<section class="section" id="about">
+  <div class="about-section">
+    <div class="about-image-wrap reveal">
+      <div class="about-image-placeholder">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="18" r="8" stroke="#8C7B72" stroke-width="1.5"/>
+          <path d="M8 40c0-8.837 7.163-16 16-16s16 7.163 16 16" stroke="#8C7B72" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        <div class="ring-pct" id="compliance-pct">0%</div>
+        <span>Photo of Demi</span>
       </div>
-      <div class="compliance-info">
-        <div class="compliance-label">Cumplimiento del día</div>
-        <div class="compliance-val" id="compliance-val">0%</div>
-        <div class="compliance-sub" id="compliance-sub">Registra tus comidas</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- REGISTRAR -->
-  <div class="screen" id="screen-registrar">
-    <div class="screen-header">
-      <p class="header-eyebrow">Registrar</p>
-      <h1 class="header-title">¿Qué comiste?</h1>
-      <p class="header-sub">Elige el tipo de registro</p>
-    </div>
-
-    <div class="reg-wrap">
-      <!-- Step 1: Meal type -->
-      <p class="card-label" style="padding:0 0 8px">Tiempo de comida</p>
-      <div class="meal-type-row" id="reg-meal-types">
-        <button class="meal-type-btn" onclick="selectRegMeal('desayuno')" id="rmt-desayuno">
-          <span class="mt-icon">🌅</span><span class="mt-label">Desayuno</span>
-        </button>
-        <button class="meal-type-btn" onclick="selectRegMeal('comida')" id="rmt-comida">
-          <span class="mt-icon">☀️</span><span class="mt-label">Comida</span>
-        </button>
-        <button class="meal-type-btn" onclick="selectRegMeal('cena')" id="rmt-cena">
-          <span class="mt-icon">🌙</span><span class="mt-label">Cena</span>
-        </button>
-        <button class="meal-type-btn" onclick="selectRegMeal('colacion')" id="rmt-colacion">
-          <span class="mt-icon">🍎</span><span class="mt-label">Colación</span>
-        </button>
-      </div>
-
-      <!-- Step 2: Input method -->
-      <p class="card-label" style="padding:0 0 8px">Cómo describirlo</p>
-      <div class="input-methods">
-        <div class="input-card" onclick="selectInputMethod('foto_menu')" id="im-foto_menu">
-          <span class="input-card-icon">📋</span>
-          <div class="input-card-title">Foto del menú</div>
-          <div class="input-card-sub">Foto del menú o descripción</div>
-        </div>
-        <div class="input-card" onclick="selectInputMethod('foto_comida')" id="im-foto_comida">
-          <span class="input-card-icon">📸</span>
-          <div class="input-card-title">Foto de la comida</div>
-          <div class="input-card-sub">Toma o sube una foto</div>
-        </div>
-        <div class="input-card" onclick="selectInputMethod('voz')" id="im-voz">
-          <span class="input-card-icon">🎙️</span>
-          <div class="input-card-title">Nota de voz</div>
-          <div class="input-card-sub">Describe con tu voz</div>
-        </div>
-        <div class="input-card" onclick="selectInputMethod('manual')" id="im-manual">
-          <span class="input-card-icon">✏️</span>
-          <div class="input-card-title">Texto manual</div>
-          <div class="input-card-sub">Escribe lo que comiste</div>
-        </div>
-      </div>
-
-      <!-- Step 3: Input area (dynamic) -->
-      <div id="input-area-wrap" class="hidden">
-        <!-- Foto menú -->
-        <div id="ia-foto_menu" class="input-area hidden">
-          <div class="input-area-inner">
-            <div class="img-preview-wrap" id="menu-preview-wrap">
-              <div class="img-preview-placeholder"><span>📋</span><p>Toca para subir foto del menú</p></div>
-            </div>
-            <input type="file" id="menu-file-input" accept="image/*" style="display:none" onchange="handleImageFile(event,'menu')">
-            <button class="img-btn" onclick="document.getElementById('menu-file-input').click()">📷 Seleccionar foto</button>
-            <div class="mt-8">
-              <textarea class="text-input-area" id="menu-extra-text" rows="2" placeholder="Descripción adicional (opcional)..."></textarea>
-            </div>
-            <button class="analyze-btn" id="analyze-menu-btn" onclick="analyzeImage('menu')" disabled>
-              <span class="spinner hidden" id="menu-spinner"></span>
-              <span id="menu-btn-text">✨ Analizar menú</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Foto comida -->
-        <div id="ia-foto_comida" class="input-area hidden">
-          <div class="input-area-inner">
-            <div class="img-preview-wrap" id="food-preview-wrap">
-              <div class="img-preview-placeholder"><span>📸</span><p>Toma o sube una foto de tu comida</p></div>
-            </div>
-            <input type="file" id="food-file-input" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(event,'food')">
-            <button class="img-btn" onclick="document.getElementById('food-file-input').click()">📷 Tomar / subir foto</button>
-            <div class="mt-8">
-              <textarea class="text-input-area" id="food-extra-text" rows="2" placeholder="¿Algo más que agregar? (opcional)..."></textarea>
-            </div>
-            <button class="analyze-btn" id="analyze-food-btn" onclick="analyzeImage('food')" disabled>
-              <span class="spinner hidden" id="food-spinner"></span>
-              <span id="food-btn-text">✨ Analizar foto</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Voz -->
-        <div id="ia-voz" class="input-area hidden">
-          <div class="input-area-inner">
-            <div class="voice-recorder">
-              <button class="record-btn" id="record-btn" onclick="toggleRecording()">🎙️</button>
-              <p class="record-status" id="record-status">Toca para grabar</p>
-              <div class="record-timer hidden" id="record-timer">0:00</div>
-            </div>
-            <div style="margin-top:8px;">
-              <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px">— o adjunta una foto también —</p>
-              <input type="file" id="voice-img-input" accept="image/*" capture="environment" style="display:none" onchange="handleVoiceImage(event)">
-              <button class="img-btn secondary" onclick="document.getElementById('voice-img-input').click()" id="voice-add-photo-btn">📷 Agregar foto (opcional)</button>
-              <div class="img-preview-wrap hidden" id="voice-img-preview" style="margin-top:8px;height:80px;aspect-ratio:auto"></div>
-            </div>
-            <div class="transcript-box hidden" id="transcript-box">Transcripción aparecerá aquí...</div>
-            <button class="analyze-btn" id="analyze-voice-btn" onclick="analyzeVoice()" disabled>
-              <span class="spinner hidden" id="voice-spinner"></span>
-              <span id="voice-btn-text">✨ Analizar nota de voz</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Manual -->
-        <div id="ia-manual" class="input-area hidden">
-          <div class="input-area-inner">
-            <textarea class="text-input-area" id="manual-text" rows="5" placeholder="Describe lo que comiste, ej: 2 huevos revueltos, 3 tortillas de maíz, ensalada de lechuga con jitomate, 1 vaso de leche descremada..."></textarea>
-            <button class="analyze-btn" id="analyze-manual-btn" onclick="analyzeText()" disabled>
-              <span class="spinner hidden" id="manual-spinner"></span>
-              <span id="manual-btn-text">✨ Analizar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 4: Analysis result + confirm -->
-      <div id="analysis-result-wrap" class="hidden">
-        <div class="analysis-result">
-          <div class="analysis-header">
-            <span class="analysis-title">Porciones detectadas</span>
-            <span class="confidence-badge" id="confidence-badge">—</span>
-          </div>
-          <div class="portions-editor" id="portions-editor"></div>
-        </div>
-        <div id="analysis-notes" class="hidden" style="font-size:12px;color:var(--muted);padding:8px 4px;line-height:1.5"></div>
-        <button class="save-btn" onclick="saveMealLog()">
-          <span>✅</span> Guardar comida
-        </button>
-        <button style="width:100%;padding:12px;text-align:center;font-size:13px;color:var(--muted);margin-top:4px" onclick="resetRegister()">
-          Cancelar y volver a empezar
-        </button>
+      <div class="about-tag">
+        <div class="about-tag-num">11</div>
+        <div class="about-tag-text">Cake flavours</div>
       </div>
     </div>
-  </div>
-
-  <!-- PROGRESO -->
-  <div class="screen" id="screen-progreso">
-    <div class="screen-header">
-      <p class="header-eyebrow">Seguimiento</p>
-      <h1 class="header-title">Tu progreso</h1>
-      <p class="header-sub" id="prog-sub">Semana actual</p>
-    </div>
-
-    <div class="prog-wrap">
-      <!-- Period tabs -->
-      <div class="period-tabs">
-        <button class="period-tab active" onclick="selectPeriod('semana')" id="pt-semana">Semana</button>
-        <button class="period-tab" onclick="selectPeriod('mes')" id="pt-mes">Mes</button>
-        <button class="period-tab" onclick="selectPeriod('historial')" id="pt-historial">Historial</button>
-      </div>
-
-      <div id="prog-semana">
-        <!-- Streak -->
-        <div class="streak-card" id="streak-card">
-          <div class="streak-card-label">Racha actual</div>
-          <div class="streak-card-num" id="sc-num">0</div>
-          <div class="streak-card-sub" id="sc-sub">días consecutivos completados</div>
-          <div class="streak-badges">
-            <div class="streak-badge-item">
-              <div class="streak-badge-val" id="sc-best">0</div>
-              <div class="streak-badge-lbl">🏆 mejor racha</div>
-            </div>
-            <div class="streak-badge-item">
-              <div class="streak-badge-val" id="sc-total">0</div>
-              <div class="streak-badge-lbl">✅ días completos</div>
-            </div>
-            <div class="streak-badge-item">
-              <div class="streak-badge-val" id="sc-avg">0%</div>
-              <div class="streak-badge-lbl">📊 promedio semana</div>
-            </div>
-          </div>
+    <div class="about-text reveal">
+      <p class="section-label">About me</p>
+      <h2 class="section-title">Baker, photographer, <em>sweet tooth.</em></h2>
+      <p>I'm Demi — the photographer, recipe developer, and creative baker behind Petit Demi, based in Amsterdam. What started as a hobby quickly turned into something I couldn't stop.</p>
+      <p>Every cake is baked to order, decorated with care, and made with the best ingredients I can find. No mass production, no shortcuts.</p>
+      <p>Whether it's a birthday, anniversary, or a Tuesday — if you have a reason to celebrate, I'd love to bake for you.</p>
+      <div style="margin-top: 36px; display: flex; gap: 40px;">
+        <div>
+          <div style="font-family: var(--serif); font-size: 36px; font-weight: 300; color: var(--ink);">100%</div>
+          <div style="font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;">Made from scratch</div>
         </div>
-
-        <!-- Week bar chart -->
-        <div class="week-chart">
-          <div class="week-chart-title">Cumplimiento 7 días</div>
-          <div class="week-bars" id="week-bars">
-            <div class="empty-state" style="width:100%"><p>Cargando...</p></div>
-          </div>
-        </div>
-
-        <!-- Group compliance (today) -->
-        <div class="group-progress">
-          <p class="week-chart-title">Grupos hoy</p>
-          <div id="group-progress-list"></div>
-        </div>
-      </div>
-
-      <div id="prog-mes" class="hidden">
-        <div class="card">
-          <p class="card-label">Resumen mensual</p>
-          <div id="monthly-summary" style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Cargando...</div>
-        </div>
-      </div>
-
-      <div id="prog-historial" class="hidden">
-        <p class="card-label" style="padding:0 0 8px">Últimas comidas</p>
-        <div class="history-list" id="history-list">
-          <div class="empty-state"><span>🍽️</span><p>No hay registros aún</p></div>
+        <div>
+          <div style="font-family: var(--serif); font-size: 36px; font-weight: 300; color: var(--ink);">🇳🇱</div>
+          <div style="font-family: var(--sans); font-size: 12px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;">Amsterdam based</div>
         </div>
       </div>
     </div>
   </div>
+</section>
 
-  <!-- EQUIVALENCIAS -->
-  <div class="screen" id="screen-equivalencias">
-    <div class="screen-header">
-      <p class="header-eyebrow">Referencia</p>
-      <h1 class="header-title">Equivalencias</h1>
-      <p class="header-sub">1 porción = 1 equivalente del grupo</p>
+<!-- Offerings -->
+<section class="section offerings-section">
+  <div class="offerings-header">
+    <div>
+      <p class="section-label">What I make</p>
+      <h2 class="section-title" style="color: var(--cream);">Every occasion <em>deserves</em><br>something sweet.</h2>
     </div>
-    <div class="prog-wrap">
-      <div class="eq-search-wrap">
-        <input class="eq-search" id="eq-search" type="search" placeholder="Buscar alimento…" oninput="filterEquivalencias()" autocomplete="off">
-      </div>
-      <div class="eq-group-chips" id="eq-group-chips">
-        <button class="eq-chip active" data-group="all" onclick="selectEqGroup('all')">Todos</button>
-        <button class="eq-chip" data-group="leche" onclick="selectEqGroup('leche')">🥛 Leche</button>
-        <button class="eq-chip" data-group="carne" onclick="selectEqGroup('carne')">🥩 Carne</button>
-        <button class="eq-chip" data-group="fruta" onclick="selectEqGroup('fruta')">🍎 Fruta</button>
-        <button class="eq-chip" data-group="verdura" onclick="selectEqGroup('verdura')">🥦 Verdura</button>
-        <button class="eq-chip" data-group="cereales" onclick="selectEqGroup('cereales')">🌾 Cereales</button>
-        <button class="eq-chip" data-group="leguminosas" onclick="selectEqGroup('leguminosas')">🫘 Leguminosas</button>
-        <button class="eq-chip" data-group="grasas" onclick="selectEqGroup('grasas')">🫒 Grasas</button>
-      </div>
-      <div id="eq-list" class="eq-list">
-        <div class="empty-state"><p>Cargando...</p></div>
-      </div>
+    <a href="menu.html" class="btn-secondary" style="border-color: rgba(250,247,242,0.25); color: var(--cream); flex-shrink: 0;">See full menu →</a>
+  </div>
+  <div class="offerings-grid">
+    <div class="offering-card reveal">
+      <div class="offering-icon">🎂</div>
+      <div class="offering-name">Custom Cakes</div>
+      <div class="offering-desc">Celebration cakes in 11 flavours. Single, double, or triple layers. 7" or 9". Every one is one of a kind.</div>
+      <div class="offering-price">from €35</div>
+      <a href="menu.html#cakes" class="offering-link">View sizes <span>→</span></a>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🧁</div>
+      <div class="offering-name">Cupcakes</div>
+      <div class="offering-desc">Light, fluffy cupcakes in any signature flavour. Perfect for parties, gifts, or just because.</div>
+      <div class="offering-price">from €21 / 6pc</div>
+      <a href="menu.html#other" class="offering-link">View options <span>→</span></a>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🍰</div>
+      <div class="offering-name">Cheesecakes & Tarts</div>
+      <div class="offering-desc">Silky cheesecakes and crisp-pastry tarts with indulgent fillings. Great for sharing.</div>
+      <div class="offering-price">from €40</div>
+      <a href="menu.html#other" class="offering-link">See flavours <span>→</span></a>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🍪</div>
+      <div class="offering-name">Brownies & Cookies</div>
+      <div class="offering-desc">Dense fudgy brownies and thick bakery-style cookies. The kind you can't stop at one.</div>
+      <div class="offering-price">from €30</div>
+      <a href="menu.html#other" class="offering-link">See varieties <span>→</span></a>
     </div>
   </div>
+</section>
 
-  <!-- TAB BAR -->
-  <nav class="tab-bar">
-    <button class="tab-btn active" onclick="showTab('inicio')" id="tab-inicio">
-      <span class="tab-icon">🏠</span>
-      <span>Inicio</span>
-    </button>
-    <button class="tab-btn" onclick="showTab('registrar')" id="tab-registrar">
-      <span class="tab-icon">➕</span>
-      <span>Registrar</span>
-    </button>
-    <button class="tab-btn" onclick="showTab('progreso')" id="tab-progreso">
-      <span class="tab-icon">📊</span>
-      <span>Progreso</span>
-    </button>
-    <button class="tab-btn" onclick="showTab('equivalencias')" id="tab-equivalencias">
-      <span class="tab-icon">📋</span>
-      <span>Equiv.</span>
-    </button>
-  </nav>
+<!-- How it works -->
+<section class="section steps-section">
+  <div class="reveal">
+    <p class="section-label">How to order</p>
+    <h2 class="section-title">Simple as <em>cake.</em></h2>
+  </div>
+  <div class="steps-grid">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <div class="step-title">Fill out the order form</div>
+      <div class="step-desc">Tell me what you're celebrating, what flavour you'd love, and when you need it. Takes about 2 minutes.</div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <div class="step-title">I'll confirm & quote</div>
+      <div class="step-desc">I'll get back to you within 24–48 hours via email or WhatsApp to confirm availability and finalise your order.</div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <div class="step-title">Pick up your cake</div>
+      <div class="step-desc">Your cake will be ready for collection in Amsterdam. I'll let you know when it's fresh out of the oven.</div>
+    </div>
+  </div>
+  <div style="margin-top: 60px;" class="reveal">
+    <a href="cotizar.html" class="btn-primary">Start your order →</a>
+  </div>
+</section>
+
+<!-- Flavours ticker -->
+<section class="flavours-section">
+  <div class="flavours-title-wrap reveal">
+    <p class="section-label">All flavours</p>
+    <h2 class="section-title" style="font-size: clamp(28px, 3.5vw, 44px);">Pick your favourite — or let me <em>surprise you.</em></h2>
+  </div>
+  <div style="overflow: hidden; width: 100%;">
+    <div class="flavours-track" id="flavourTrack">
+      <!-- filled by JS twice for infinite loop -->
+    </div>
+  </div>
+</section>
+
+<!-- Instagram strip -->
+<div class="instagram-strip reveal">
+  <div class="instagram-text">
+    <div class="instagram-handle">Follow along <em>@petit.demi</em></div>
+    <div class="instagram-sub">Recipes, behind-the-scenes, and a lot of cake content.</div>
+  </div>
+  <a href="https://www.instagram.com/petit.demi/" target="_blank" rel="noopener" class="instagram-btn">Open Instagram →</a>
 </div>
 
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<!-- DELETE MODAL -->
-<div class="modal-overlay" id="delete-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <h3 class="modal-title">Eliminar registro</h3>
-    <p class="modal-text">¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.</p>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="modal-confirm" onclick="confirmDelete()">Eliminar</button>
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo">Petit Demi</div>
+      <div class="footer-tagline">Custom cakes · Amsterdam</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <div class="footer-col-title">Bakery</div>
+        <a href="menu.html">The Menu</a>
+        <a href="menu.html#flavours">Flavours</a>
+        <a href="cotizar.html">Order a Cake</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Connect</div>
+        <a href="https://www.instagram.com/petit.demi/" target="_blank">Instagram</a>
+        <a href="https://www.tiktok.com/@petitdemi" target="_blank">TikTok</a>
+        <a href="https://wa.me/31601089333" target="_blank">WhatsApp</a>
+        <a href="mailto:info@petitdemi.com">Email</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Recipes</div>
+        <a href="https://www.petitdemi.com/recipes" target="_blank">All Recipes</a>
+        <a href="https://www.petitdemi.com/categories/cakes-cupcakes" target="_blank">Cakes & Cupcakes</a>
+        <a href="https://www.petitdemi.com/categories/cookies" target="_blank">Cookies</a>
+      </div>
     </div>
   </div>
-</div>
-
-<!-- RECIPE MODAL -->
-<div class="modal-overlay" id="recipe-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="recipe-modal-scroll" id="recipe-modal-content"></div>
-    <button class="log-btn" style="margin-top:16px" onclick="closeRecipeModal()">Cerrar</button>
+  <div class="footer-bottom">
+    <div class="footer-legal">© 2025 Petit Demi · KVK 85225274 · BTW NL004070808B89</div>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/petit.demi/" target="_blank">Instagram</a>
+      <a href="https://www.tiktok.com/@petitdemi" target="_blank">TikTok</a>
+      <a href="https://nl.pinterest.com/bypetitdemi" target="_blank">Pinterest</a>
+    </div>
   </div>
-</div>
+</footer>
 
 <script>
-// ─── Config ──────────────────────────────────────────────────────────────────
-const API_BASE = 'https://meditrack-x8m8.onrender.com';
+  // Nav scroll
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  });
 
-const MEAL_PLAN = {
-  desayuno: { leche:1, carne:2, fruta:1, verdura:1, cereales:3, leguminosas:0, grasas:1 },
-  comida:   { leche:0, carne:3, fruta:1, verdura:1, cereales:4, leguminosas:1, grasas:2 },
-  cena:     { leche:1, carne:2, fruta:1, verdura:1, cereales:2, leguminosas:0, grasas:1 },
-  colacion: { leche:0, carne:0, fruta:null, verdura:null, cereales:0, leguminosas:0, grasas:0 },
-};
-const PIPELINE = ['desayuno','comida','cena'];
-const GROUP_LABELS = { leche:'Leche', carne:'Carne', fruta:'Fruta', verdura:'Verdura', cereales:'Cereales', leguminosas:'Leguminosas', grasas:'Grasas' };
-const GROUP_ICONS  = { leche:'🥛', carne:'🥩', fruta:'🍎', verdura:'🥦', cereales:'🌽', leguminosas:'🫘', grasas:'🥑' };
-const MEAL_LABELS  = { desayuno:'Desayuno', comida:'Comida', cena:'Cena', colacion:'Colación' };
-const MEAL_TIMES   = { desayuno:'7:00 – 10:00 am', comida:'1:00 – 3:00 pm', cena:'7:00 – 9:00 pm', colacion:'Entre comidas' };
-const MEAL_ICONS   = { desayuno:'🌅', comida:'☀️', cena:'🌙', colacion:'🍎' };
-const DAILY_TOTALS = { leche:2, carne:7, fruta:3, verdura:3, cereales:9, leguminosas:1, grasas:4 };
+  // Mobile menu
+  function toggleMenu() {
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
 
-// ─── State ───────────────────────────────────────────────────────────────────
-let token         = localStorage.getItem('mt_token') || '';
-let todayData     = null;
-let currentViewMeal = 'desayuno';
-let currentRegMeal  = null;
-let currentInputMethod = null;
-let currentImageB64 = { menu: null, food: null };
-let voiceImageB64   = null;
-let mediaRecorder   = null;
-let audioChunks     = [];
-let recordingTimer  = null;
-let recordingSeconds = 0;
-let audioBlob       = null;
-let pendingAnalysis = null;  // { portions, confidence, notes, identified_foods }
-let pendingDeleteId = null;
-const recipeCache = {};
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }});
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => observer.observe(el));
 
-function todayMX() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
-}
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-async function doLogin(e) {
-  e.preventDefault();
-  const pwd = document.getElementById('login-pwd').value;
-  try {
-    const r = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pwd }),
+  // Flavour ticker
+  const flavours = [
+    'Vanilla', 'Chocolate', 'Red Velvet', 'Lemon Blueberry', 'Cookies & Cream',
+    'Lemon Raspberry', 'Hummingbird', 'Vanilla Confetti', 'Coconut Vanilla',
+    'Lemon Pistachio', 'Carrot',
+  ];
+  const track = document.getElementById('flavourTrack');
+  // Render twice for seamless loop
+  [0, 1].forEach(() => {
+    flavours.forEach((f, i) => {
+      const pill = document.createElement('div');
+      pill.className = 'flavour-pill' + (i % 5 === 2 ? ' accent' : '');
+      pill.textContent = f;
+      track.appendChild(pill);
     });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error);
-    token = d.token;
-    localStorage.setItem('mt_token', token);
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-    initApp();
-  } catch (err) {
-    document.getElementById('login-err').textContent = err.message;
-  }
-}
-
-// ─── API helper ──────────────────────────────────────────────────────────────
-async function api(path, options = {}) {
-  const r = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { 'x-auth-token': token, 'Content-Type': 'application/json', ...options.headers },
   });
-  if (r.status === 401) { localStorage.removeItem('mt_token'); location.reload(); }
-  if (!r.ok) {
-    const d = await r.json().catch(() => ({}));
-    throw new Error(d.error || 'Error del servidor');
-  }
-  return r.json();
-}
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
-function initApp() {
-  updateDateHeader();
-  loadTodayData();
-}
-
-function updateDateHeader() {
-  const now = new Date();
-  const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  const h = now.getHours();
-  const greeting = h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches';
-  document.getElementById('today-date-label').textContent =
-    `Hoy, ${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
-  document.querySelector('#screen-inicio .header-title').textContent = `${greeting}, Héctor`;
-}
-
-async function loadTodayData() {
-  try {
-    todayData = await api('/api/today');
-    renderInicio();
-    renderRegisterState();
-  } catch (err) {
-    showToast('Error cargando datos: ' + err.message, 'error');
-  }
-}
-
-// ─── INICIO TAB ──────────────────────────────────────────────────────────────
-function renderInicio() {
-  if (!todayData) return;
-  renderPipeline();
-  renderStreakPill();
-  selectViewMeal(todayData.nextMeal === 'completed' ? 'desayuno' : todayData.nextMeal);
-  renderComplianceCard();
-}
-
-function renderPipeline() {
-  const { loggedMeals, nextMeal } = todayData;
-  PIPELINE.forEach((meal, i) => {
-    const dot   = document.getElementById(`pdot-${meal}`);
-    const label = document.getElementById(`plabel-${meal}`);
-    const isDone   = loggedMeals.includes(meal);
-    const isActive = meal === nextMeal;
-    dot.className = 'pipeline-dot ' + (isDone ? 'done' : isActive ? 'active' : 'pending');
-    label.className = 'pipeline-label' + (isActive ? ' active' : '');
-    if (i > 0) {
-      const con = document.getElementById(`pcon-${i}`);
-      con.className = 'pipeline-connector' + (loggedMeals.includes(PIPELINE[i-1]) ? ' done' : '');
-    }
-  });
-
-  // Update view tabs
-  PIPELINE.forEach(meal => {
-    const tab = document.getElementById(`itab-${meal}`);
-    if (todayData.loggedMeals.includes(meal)) {
-      tab.className = 'meal-tab done-tab';
-    } else if (meal === todayData.nextMeal) {
-      tab.className = 'meal-tab active';
-    } else {
-      tab.className = 'meal-tab';
-    }
-  });
-}
-
-function renderStreakPill() {
-  api('/api/stats/streak').then(d => {
-    document.getElementById('streak-num').textContent = `${d.currentStreak} día${d.currentStreak !== 1 ? 's' : ''}`;
-  }).catch(() => {});
-}
-
-function selectViewMeal(meal) {
-  currentViewMeal = meal;
-  // Update tabs
-  ['desayuno','comida','cena','colacion'].forEach(m => {
-    const tab = document.getElementById(`itab-${m}`);
-    const isDone = todayData && todayData.loggedMeals.includes(m);
-    if (m === meal) tab.className = 'meal-tab active';
-    else if (isDone) tab.className = 'meal-tab done-tab';
-    else tab.className = 'meal-tab';
-  });
-
-  const plan = MEAL_PLAN[meal];
-  document.getElementById('view-meal-name').textContent = MEAL_LABELS[meal];
-  document.getElementById('view-meal-time').textContent = MEAL_TIMES[meal];
-
-  // Next meal tag
-  const tagWrap = document.getElementById('next-meal-tag-wrap');
-  if (todayData && meal === todayData.nextMeal) {
-    tagWrap.innerHTML = `<span class="next-meal-tag">⬆ Siguiente</span>`;
-  } else if (todayData && todayData.loggedMeals.includes(meal)) {
-    tagWrap.innerHTML = `<span class="next-meal-tag" style="background:var(--green-lt)">✅ Completado</span>`;
-  } else {
-    tagWrap.innerHTML = '';
-  }
-
-  // Group grid
-  const grid = document.getElementById('group-grid');
-  if (meal === 'colacion') {
-    grid.innerHTML = `
-      <div class="group-chip" style="grid-column:span 2">
-        ${GROUP_ICONS.fruta} <div class="group-chip-info">
-          <div class="group-chip-name">FRUTA (bajo IG)</div>
-          <div class="group-chip-count">Libre <span>sin límite</span></div>
-        </div>
-      </div>
-      <div class="group-chip" style="grid-column:span 2">
-        ${GROUP_ICONS.verdura} <div class="group-chip-info">
-          <div class="group-chip-name">VERDURA</div>
-          <div class="group-chip-count">Libre <span>sin límite</span></div>
-        </div>
-      </div>`;
-  } else {
-    // Find consumed for this meal
-    const mealSummary = todayData.mealSummary?.find(m => m.meal === meal);
-    const consumed = mealSummary?.portions || {};
-    grid.innerHTML = Object.entries(plan)
-      .filter(([, qty]) => qty > 0)
-      .map(([group, qty]) => {
-        const got  = consumed[group] || 0;
-        const done = got >= qty;
-        const over = got > qty;
-        return `<div class="group-chip ${done ? 'done' : ''} ${over ? 'over' : ''}">
-          <span class="group-chip-icon">${GROUP_ICONS[group]}</span>
-          <div class="group-chip-info">
-            <div class="group-chip-name">${GROUP_LABELS[group].toUpperCase()}</div>
-            <div class="group-chip-count">${qty} <span>porciones</span></div>
-          </div>
-          <span class="group-chip-check">${done ? '✅' : ''}</span>
-        </div>`;
-      }).join('');
-  }
-
-  // Log button
-  const btn = document.getElementById('log-btn');
-  if (todayData && todayData.nextMeal === 'completed') {
-    btn.className = 'log-btn completed';
-    btn.innerHTML = '🏆 ¡Día completado!';
-    btn.onclick = null;
-  } else if (todayData && meal === todayData.nextMeal) {
-    btn.className = 'log-btn';
-    btn.innerHTML = `<span>➕</span> Registrar ${MEAL_LABELS[meal]}`;
-    btn.onclick = goToRegister;
-  } else if (meal === 'colacion') {
-    btn.className = 'log-btn';
-    btn.innerHTML = `<span>➕</span> Registrar Colación`;
-    btn.onclick = goToRegister;
-  } else {
-    btn.className = 'log-btn';
-    btn.style.background = 'var(--bg2)';
-    btn.style.color = 'var(--muted)';
-    btn.innerHTML = todayData?.loggedMeals.includes(meal)
-      ? '✅ Ya registrado'
-      : `🔒 Pendiente de orden`;
-    btn.onclick = null;
-  }
-
-  // Recipe suggestion button
-  const recipeBtnWrap = document.getElementById('recipe-btn-wrap');
-  if (recipeBtnWrap) {
-    if (['desayuno','comida','cena'].includes(meal)) {
-      recipeBtnWrap.innerHTML = `<button class="recipe-hint-btn" id="recipe-hint-btn" onclick="suggestRecipe('${meal}')">💡 Ver 3 recetas para ${MEAL_LABELS[meal]}</button>`;
-    } else {
-      recipeBtnWrap.innerHTML = '';
-    }
-  }
-}
-
-function renderComplianceCard() {
-  if (!todayData) return;
-  const card = document.getElementById('today-compliance-card');
-  card.style.display = '';
-
-  // Compute compliance from today
-  let total = 0, hit = 0;
-  for (const [g, t] of Object.entries(DAILY_TOTALS)) {
-    total += t;
-    hit   += Math.min(todayData.consumed[g] || 0, t);
-  }
-  const pct = total > 0 ? Math.round((hit/total)*100) : 0;
-  const circle = document.getElementById('compliance-circle');
-  const circumference = 138.2;
-  circle.style.strokeDashoffset = circumference - (circumference * pct / 100);
-  document.getElementById('compliance-pct').textContent = `${pct}%`;
-  document.getElementById('compliance-val').textContent = `${pct}% cumplido`;
-  const done = todayData.loggedMeals.length;
-  document.getElementById('compliance-sub').textContent =
-    `${done}/3 comidas registradas`;
-}
-
-// ─── REGISTER TAB ─────────────────────────────────────────────────────────────
-function renderRegisterState() {
-  if (!todayData) return;
-  const { nextMeal, loggedMeals } = todayData;
-  PIPELINE.forEach(meal => {
-    const btn = document.getElementById(`rmt-${meal}`);
-    if (loggedMeals.includes(meal)) {
-      btn.className = 'meal-type-btn done-m';
-    } else if (meal === nextMeal || meal === 'colacion') {
-      btn.className = 'meal-type-btn';
-    } else {
-      btn.className = 'meal-type-btn locked';
-    }
-  });
-  // Auto-select next meal
-  if (nextMeal && nextMeal !== 'completed') selectRegMeal(nextMeal);
-}
-
-function selectRegMeal(meal) {
-  if (!todayData) return;
-  const { nextMeal, loggedMeals } = todayData;
-  // Block locked meals
-  const isLocked = PIPELINE.includes(meal) && meal !== nextMeal && !loggedMeals.includes(meal);
-  if (isLocked && meal !== 'colacion') {
-    showToast(`Primero registra ${MEAL_LABELS[nextMeal]}`, 'error');
-    return;
-  }
-  currentRegMeal = meal;
-  ['desayuno','comida','cena','colacion'].forEach(m => {
-    const btn = document.getElementById(`rmt-${m}`);
-    if (m === meal) btn.classList.add('selected');
-    else btn.classList.remove('selected');
-  });
-}
-
-function selectInputMethod(method) {
-  currentInputMethod = method;
-  ['foto_menu','foto_comida','voz','manual'].forEach(m => {
-    document.getElementById(`im-${m}`).className = 'input-card' + (m === method ? ' selected' : '');
-    document.getElementById(`ia-${m}`).classList.add('hidden');
-  });
-  document.getElementById('input-area-wrap').classList.remove('hidden');
-  document.getElementById(`ia-${method}`).classList.remove('hidden');
-  document.getElementById('analysis-result-wrap').classList.add('hidden');
-  // Enable analyze button for manual based on content
-  if (method === 'manual') {
-    const ta = document.getElementById('manual-text');
-    ta.oninput = () => {
-      document.getElementById('analyze-manual-btn').disabled = !ta.value.trim();
-    };
-  }
-}
-
-// ─── Image handling ───────────────────────────────────────────────────────────
-function handleImageFile(event, type) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const b64 = e.target.result.split(',')[1];
-    currentImageB64[type] = b64;
-    const wrap = document.getElementById(`${type === 'menu' ? 'menu' : 'food'}-preview-wrap`);
-    wrap.innerHTML = `<img src="${e.target.result}" alt="preview">`;
-    document.getElementById(`analyze-${type === 'menu' ? 'menu' : 'food'}-btn`).disabled = false;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function analyzeImage(type) {
-  if (!currentRegMeal) { showToast('Selecciona el tiempo de comida', 'error'); return; }
-  const b64 = currentImageB64[type];
-  if (!b64) return;
-
-  const spinnerId = `${type === 'menu' ? 'menu' : 'food'}-spinner`;
-  const textId    = `${type === 'menu' ? 'menu' : 'food'}-btn-text`;
-  const btnId     = `analyze-${type === 'menu' ? 'menu' : 'food'}-btn`;
-
-  setLoading(spinnerId, textId, btnId, true, 'Analizando...');
-  try {
-    const extra = document.getElementById(`${type === 'menu' ? 'menu' : 'food'}-extra-text`)?.value || '';
-    const result = await api('/api/analyze/image', {
-      method: 'POST',
-      body: JSON.stringify({
-        image_base64: b64,
-        image_type: 'image/jpeg',
-        meal_type: currentRegMeal,
-        extra_description: extra,
-      }),
-    });
-    pendingAnalysis = result;
-    renderAnalysisResult(result);
-  } catch (err) {
-    showToast('Error al analizar: ' + err.message, 'error');
-  } finally {
-    setLoading(spinnerId, textId, btnId, false, '✨ Analizar');
-  }
-}
-
-// ─── Voice recording ──────────────────────────────────────────────────────────
-function handleVoiceImage(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    voiceImageB64 = e.target.result.split(',')[1];
-    const prev = document.getElementById('voice-img-preview');
-    prev.classList.remove('hidden');
-    prev.innerHTML = `<img src="${e.target.result}" alt="preview">`;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function toggleRecording() {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    stopRecording();
-  } else {
-    startRecording();
-  }
-}
-
-async function startRecording() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioChunks = [];
-    mediaRecorder = new MediaRecorder(stream);
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      document.getElementById('analyze-voice-btn').disabled = false;
-      document.getElementById('record-status').textContent = '✅ Grabación lista — toca analizar';
-    };
-    mediaRecorder.start();
-    recordingSeconds = 0;
-    document.getElementById('record-btn').classList.add('recording');
-    document.getElementById('record-btn').textContent = '⏹️';
-    document.getElementById('record-status').textContent = 'Grabando...';
-    document.getElementById('record-timer').classList.remove('hidden');
-    recordingTimer = setInterval(() => {
-      recordingSeconds++;
-      const m = Math.floor(recordingSeconds/60);
-      const s = recordingSeconds % 60;
-      document.getElementById('record-timer').textContent = `${m}:${String(s).padStart(2,'0')}`;
-    }, 1000);
-  } catch (err) {
-    showToast('No se pudo acceder al micrófono', 'error');
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder) mediaRecorder.stop();
-  clearInterval(recordingTimer);
-  document.getElementById('record-btn').classList.remove('recording');
-  document.getElementById('record-btn').textContent = '🎙️';
-}
-
-async function analyzeVoice() {
-  if (!currentRegMeal) { showToast('Selecciona el tiempo de comida', 'error'); return; }
-  if (!audioBlob) return;
-  setLoading('voice-spinner','voice-btn-text','analyze-voice-btn', true, 'Transcribiendo y analizando...');
-  try {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'voice.webm');
-    formData.append('meal_type', currentRegMeal);
-    if (voiceImageB64) formData.append('image_base64', voiceImageB64);
-
-    const r = await fetch(`${API_BASE}/api/analyze/voice`, {
-      method: 'POST',
-      headers: { 'x-auth-token': token },
-      body: formData,
-    });
-    if (!r.ok) throw new Error((await r.json()).error);
-    const result = await r.json();
-    if (result.transcript) {
-      document.getElementById('transcript-box').textContent = `"${result.transcript}"`;
-      document.getElementById('transcript-box').classList.remove('hidden');
-    }
-    pendingAnalysis = result;
-    renderAnalysisResult(result);
-  } catch (err) {
-    showToast('Error: ' + err.message, 'error');
-  } finally {
-    setLoading('voice-spinner','voice-btn-text','analyze-voice-btn', false, '✨ Analizar nota de voz');
-  }
-}
-
-async function analyzeText() {
-  if (!currentRegMeal) { showToast('Selecciona el tiempo de comida', 'error'); return; }
-  const text = document.getElementById('manual-text').value.trim();
-  if (!text) return;
-  setLoading('manual-spinner','manual-btn-text','analyze-manual-btn', true, 'Analizando...');
-  try {
-    const result = await api('/api/analyze/text', {
-      method: 'POST',
-      body: JSON.stringify({ description: text, meal_type: currentRegMeal }),
-    });
-    pendingAnalysis = result;
-    renderAnalysisResult(result);
-  } catch (err) {
-    showToast('Error: ' + err.message, 'error');
-  } finally {
-    setLoading('manual-spinner','manual-btn-text','analyze-manual-btn', false, '✨ Analizar');
-  }
-}
-
-// ─── Analysis Result ──────────────────────────────────────────────────────────
-function renderAnalysisResult(result) {
-  document.getElementById('analysis-result-wrap').classList.remove('hidden');
-  const badge = document.getElementById('confidence-badge');
-  badge.textContent = result.confidence || '—';
-  badge.className = `confidence-badge ${result.confidence || 'media'}`;
-
-  const plan = MEAL_PLAN[currentRegMeal] || {};
-  const editor = document.getElementById('portions-editor');
-  editor.innerHTML = Object.entries(GROUP_LABELS).map(([group, label]) => {
-    const planQty  = plan[group] ?? 0;
-    const gotQty   = result.portions_summary?.[group] ?? 0;
-    const showZeroTarget = planQty === 0 && gotQty === 0;
-    if (showZeroTarget && currentRegMeal !== 'colacion') return '';
-    return `<div class="portion-row">
-      <span class="portion-icon">${GROUP_ICONS[group]}</span>
-      <div class="portion-label">
-        <div style="font-size:13px;font-weight:600">${label}</div>
-        ${planQty > 0 ? `<div style="font-size:10px;color:var(--muted)">Meta: ${planQty}</div>` : ''}
-      </div>
-      <div class="portion-stepper">
-        <button class="stepper-btn" onclick="adjustPortion('${group}',-0.5)">−</button>
-        <div>
-          <div class="stepper-val" id="pval-${group}">${gotQty}</div>
-        </div>
-        <button class="stepper-btn" onclick="adjustPortion('${group}',0.5)">+</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  const notes = document.getElementById('analysis-notes');
-  if (result.notes) {
-    notes.textContent = '💬 ' + result.notes;
-    notes.classList.remove('hidden');
-  } else {
-    notes.classList.add('hidden');
-  }
-
-  // Scroll to result
-  document.getElementById('analysis-result-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function adjustPortion(group, delta) {
-  const el = document.getElementById(`pval-${group}`);
-  if (!el || !pendingAnalysis) return;
-  const current = parseFloat(el.textContent) || 0;
-  const newVal  = Math.max(0, current + delta);
-  el.textContent = newVal;
-  if (!pendingAnalysis.portions_summary) pendingAnalysis.portions_summary = {};
-  pendingAnalysis.portions_summary[group] = newVal;
-}
-
-async function saveMealLog() {
-  if (!pendingAnalysis || !currentRegMeal) return;
-  try {
-    const portions = {};
-    Object.keys(GROUP_LABELS).forEach(g => {
-      const el = document.getElementById(`pval-${g}`);
-      portions[g] = el ? parseFloat(el.textContent) || 0 : 0;
-    });
-
-    await api('/api/logs', {
-      method: 'POST',
-      body: JSON.stringify({
-        meal_type:    currentRegMeal,
-        portions,
-        input_type:   currentInputMethod,
-        gpt_analysis: pendingAnalysis,
-      }),
-    });
-
-    showToast(`${MEAL_LABELS[currentRegMeal]} guardado ✅`, 'success');
-    resetRegister();
-    await loadTodayData();
-    showTab('inicio');
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-function resetRegister() {
-  pendingAnalysis   = null;
-  currentInputMethod = null;
-  currentImageB64   = { menu: null, food: null };
-  voiceImageB64     = null;
-  audioBlob         = null;
-  if (mediaRecorder?.state === 'recording') stopRecording();
-  document.getElementById('input-area-wrap').classList.add('hidden');
-  document.getElementById('analysis-result-wrap').classList.add('hidden');
-  ['foto_menu','foto_comida','voz','manual'].forEach(m => {
-    document.getElementById(`im-${m}`).classList.remove('selected');
-    document.getElementById(`ia-${m}`).classList.add('hidden');
-  });
-  // Reset inputs
-  document.getElementById('manual-text').value = '';
-  document.getElementById('menu-extra-text').value = '';
-  document.getElementById('food-extra-text').value = '';
-  document.getElementById('menu-preview-wrap').innerHTML = `<div class="img-preview-placeholder"><span>📋</span><p>Toca para subir foto del menú</p></div>`;
-  document.getElementById('food-preview-wrap').innerHTML = `<div class="img-preview-placeholder"><span>📸</span><p>Toma o sube una foto de tu comida</p></div>`;
-  document.getElementById('record-status').textContent = 'Toca para grabar';
-  document.getElementById('record-timer').classList.add('hidden');
-  document.getElementById('transcript-box').classList.add('hidden');
-  document.getElementById('voice-img-preview').classList.add('hidden');
-}
-
-function goToRegister() {
-  showTab('registrar');
-  if (todayData?.nextMeal) selectRegMeal(todayData.nextMeal);
-}
-
-// ─── PROGRESO TAB ─────────────────────────────────────────────────────────────
-async function loadProgresoData() {
-  try {
-    const [streak, week] = await Promise.all([
-      api('/api/stats/streak'),
-      api('/api/stats/week'),
-    ]);
-    renderStreakCard(streak, week);
-    renderWeekChart(week);
-    renderGroupProgress();
-  } catch (err) {
-    showToast('Error cargando progreso', 'error');
-  }
-}
-
-function renderStreakCard(streak, week) {
-  document.getElementById('sc-num').textContent   = streak.currentStreak;
-  document.getElementById('sc-best').textContent  = streak.bestStreak;
-  document.getElementById('sc-total').textContent = streak.totalCompleteDays;
-  document.getElementById('sc-avg').textContent   = `${week.avgCompliance}%`;
-  document.getElementById('sc-sub').textContent =
-    streak.currentStreak === 0
-      ? 'Empieza hoy tu racha'
-      : streak.currentStreak === 1
-        ? 'día consecutivo completado 🎉'
-        : 'días consecutivos completados 🔥';
-}
-
-function renderWeekChart(week) {
-  const today = todayMX();
-  // Build Mon–Sun of current week
-  const todayDate = new Date(today + 'T12:00:00');
-  const dow = todayDate.getDay(); // 0=Sun
-  const monday = new Date(todayDate);
-  monday.setDate(todayDate.getDate() - (dow === 0 ? 6 : dow - 1));
-  const WEEK_LABELS = ['L','M','M','J','V','S','D'];
-  const days7 = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days7.push(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(d));
-  }
-
-  const wrap = document.getElementById('week-bars');
-  wrap.innerHTML = days7.map((date, i) => {
-    const entry    = week.days?.find(d => d.date === date);
-    const pct      = entry?.compliance || 0;
-    const isFuture = date > today;
-    const height   = isFuture ? 4 : Math.max(4, pct * 0.8);
-    const isToday  = date === today;
-    const cls = isFuture ? 'future' : isToday ? 'today' : pct >= 100 ? 'perfect' : pct > 0 ? 'filled' : '';
-    return `<div class="week-bar-wrap">
-      <div class="week-bar ${cls}" style="height:${height}px">
-        ${pct > 0 && !isFuture ? `<div class="week-bar-pct">${pct}%</div>` : ''}
-      </div>
-      <div class="week-bar-day ${isToday ? 'today' : ''}">${WEEK_LABELS[i]}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderGroupProgress() {
-  if (!todayData) return;
-  const list = document.getElementById('group-progress-list');
-  list.innerHTML = Object.entries(DAILY_TOTALS).map(([group, total]) => {
-    const consumed = todayData.consumed[group] || 0;
-    const pct  = total > 0 ? Math.min(Math.round((consumed/total)*100), 100) : 0;
-    const over = consumed > total;
-    return `<div class="gp-row">
-      <div class="gp-header">
-        <span class="gp-name">${GROUP_ICONS[group]} ${GROUP_LABELS[group]}</span>
-        <span class="gp-count">${consumed}/${total} porciones</span>
-      </div>
-      <div class="gp-bar">
-        <div class="gp-fill ${over ? 'over' : pct === 100 ? 'perfect' : ''}" style="width:${pct}%"></div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadHistory() {
-  try {
-    const logs = await api('/api/logs?limit=30');
-    renderHistory(logs);
-  } catch (err) {}
-}
-
-function renderHistory(logs) {
-  const list = document.getElementById('history-list');
-  if (!logs || logs.length === 0) {
-    list.innerHTML = `<div class="empty-state"><span>🍽️</span><p>No hay registros aún</p></div>`;
-    return;
-  }
-  list.innerHTML = logs.map(log => {
-    const d    = new Date(log.logged_at);
-    const time = d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
-    const dateStr = d.toLocaleDateString('es-MX', { day:'2-digit', month:'short' });
-    const chips = log.portions
-      ? Object.entries(log.portions)
-          .filter(([,q]) => q > 0)
-          .map(([g,q]) => `<span class="history-chip">${GROUP_ICONS[g]} ${q}</span>`)
-          .join('')
-      : '';
-    const input_icons = { foto_menu:'📋', foto_comida:'📸', voz:'🎙️', manual:'✏️' };
-    return `<div class="history-item">
-      <div class="history-icon">${MEAL_ICONS[log.meal_type] || '🍽️'}</div>
-      <div class="history-content">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div class="history-meal">${MEAL_LABELS[log.meal_type] || log.meal_type}</div>
-          <span style="font-size:11px;background:var(--bg2);padding:1px 6px;border-radius:100px;color:var(--muted)">${input_icons[log.input_type]||''}</span>
-        </div>
-        <div class="history-desc">${log.description || log.gpt_analysis?.notes || '—'}</div>
-        <div class="history-chips">${chips}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <div class="history-time">${dateStr}<br>${time}</div>
-        <button class="history-delete" onclick="openDeleteModal('${log.id}')">🗑️</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadMonthlySummary() {
-  try {
-    const todayStr = todayMX();
-    const from = todayStr.substring(0, 7) + '-01';
-    const to   = todayStr;
-    const data = await api(`/api/stats/daily?from=${from}&to=${to}`);
-    const el   = document.getElementById('monthly-summary');
-    const total = data.length;
-    const complete = data.filter(d => d.allMealsDone).length;
-    const avg = total > 0 ? Math.round(data.reduce((s,d) => s+d.compliance,0)/total) : 0;
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center">
-        <div><div style="font-family:'Fraunces',serif;font-size:36px;color:var(--green)">${complete}</div><div style="font-size:11px;color:var(--muted)">días completos</div></div>
-        <div><div style="font-family:'Fraunces',serif;font-size:36px;color:var(--accent)">${total}</div><div style="font-size:11px;color:var(--muted)">días registrados</div></div>
-        <div><div style="font-family:'Fraunces',serif;font-size:36px;color:var(--gold)">${avg}%</div><div style="font-size:11px;color:var(--muted)">cumplimiento</div></div>
-      </div>`;
-  } catch(err) {}
-}
-
-function selectPeriod(period) {
-  ['semana','mes','historial'].forEach(p => {
-    document.getElementById(`pt-${p}`).className = 'period-tab' + (p === period ? ' active' : '');
-    document.getElementById(`prog-${p}`).className = p === period ? '' : 'hidden';
-  });
-  if (period === 'historial') loadHistory();
-  if (period === 'mes') loadMonthlySummary();
-}
-
-// ─── Delete Modal ──────────────────────────────────────────────────────────────
-function openDeleteModal(id) {
-  pendingDeleteId = id;
-  document.getElementById('delete-modal').classList.add('open');
-}
-function closeDeleteModal() {
-  pendingDeleteId = null;
-  document.getElementById('delete-modal').classList.remove('open');
-}
-async function confirmDelete() {
-  if (!pendingDeleteId) return;
-  try {
-    await api(`/api/logs/${pendingDeleteId}`, { method: 'DELETE' });
-    closeDeleteModal();
-    showToast('Registro eliminado', 'success');
-    await loadTodayData();
-    loadHistory();
-  } catch (err) {
-    showToast('Error al eliminar', 'error');
-  }
-}
-
-// ─── Tab navigation ───────────────────────────────────────────────────────────
-// ─── EQUIVALENCIAS ────────────────────────────────────────────────────────────
-let eqData = null;
-let eqActiveGroup = 'all';
-
-async function loadEquivalencias() {
-  if (eqData) { renderEqList(); return; }
-  try {
-    eqData = await api('/api/equivalents');
-    renderEqList();
-  } catch (err) {
-    document.getElementById('eq-list').innerHTML = `<div class="empty-state"><p>Error cargando datos</p></div>`;
-  }
-}
-
-function selectEqGroup(group) {
-  eqActiveGroup = group;
-  document.querySelectorAll('.eq-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.group === group);
-  });
-  renderEqList();
-}
-
-function filterEquivalencias() {
-  renderEqList();
-}
-
-const GI_LABEL = { bajo: 'IG bajo', moderado: 'IG moderado', alto: 'IG alto' };
-const GI_COLOR = { bajo: 'var(--green)', moderado: 'var(--warn)', alto: 'var(--danger)' };
-const GROUP_ICONS_EQ = { leche:'🥛', carne:'🥩', fruta:'🍎', verdura:'🥦', cereales:'🌾', leguminosas:'🫘', grasas:'🫒' };
-
-function renderEqList() {
-  if (!eqData) return;
-  const query = (document.getElementById('eq-search')?.value || '').toLowerCase().trim();
-  const list  = document.getElementById('eq-list');
-  const groups = eqActiveGroup === 'all'
-    ? Object.keys(eqData.items)
-    : [eqActiveGroup];
-
-  let html = '';
-  for (const group of groups) {
-    const items = eqData.items[group] || [];
-    const filtered = query
-      ? items.filter(it => it.name.toLowerCase().includes(query))
-      : items;
-    if (!filtered.length) continue;
-
-    if (eqActiveGroup === 'all') {
-      html += `<div class="eq-group-header">${GROUP_ICONS_EQ[group]} ${eqData.groups[group]}</div>`;
-    }
-    for (const it of filtered) {
-      const portionText = it.amount ? `${it.amount} ${it.unit}` : it.unit;
-      const notesText   = it.notes ? `<span class="eq-notes">${it.notes}</span>` : '';
-      const giBadge     = it.glycemicIndex
-        ? `<span class="eq-gi-badge" style="background:${GI_COLOR[it.glycemicIndex]}22;color:${GI_COLOR[it.glycemicIndex]}">${GI_LABEL[it.glycemicIndex]}</span>`
-        : '';
-      const subgBadge   = it.group
-        ? `<span class="eq-gi-badge" style="background:var(--surface);color:var(--muted)">Grupo ${it.group}</span>`
-        : '';
-      html += `<div class="eq-item">
-        <div class="eq-item-name">${it.name}</div>
-        <div class="eq-item-detail">
-          <span class="eq-portion">${portionText}</span>
-          ${notesText}${giBadge}${subgBadge}
-        </div>
-      </div>`;
-    }
-  }
-  list.innerHTML = html || `<div class="empty-state"><span>🔍</span><p>Sin resultados para "${query}"</p></div>`;
-}
-
-// ─── Recipe Suggestion ────────────────────────────────────────────────────────
-
-async function suggestRecipe(meal) {
-  if (!['desayuno','comida','cena'].includes(meal)) return;
-  if (recipeCache[meal]) { openRecipeModal(recipeCache[meal], meal); return; }
-
-  const btn = document.getElementById('recipe-hint-btn');
-  if (btn) { btn.classList.add('loading'); btn.innerHTML = '<span class="spinner"></span> Generando recetas...'; }
-
-  try {
-    const result = await api('/api/suggest-recipe', { method: 'POST', body: JSON.stringify({ meal_type: meal }) });
-    if (!result.recipes?.length) throw new Error('Respuesta incompleta');
-    recipeCache[meal] = result;
-    openRecipeModal(result, meal);
-  } catch (err) {
-    showToast('No se pudieron generar recetas: ' + err.message, 'error');
-  } finally {
-    const b = document.getElementById('recipe-hint-btn');
-    if (b) { b.classList.remove('loading'); b.innerHTML = `💡 Ver 3 recetas para ${MEAL_LABELS[meal]}`; }
-  }
-}
-
-function openRecipeModal(data, meal) {
-  const content = document.getElementById('recipe-modal-content');
-  const cardsHtml = (data.recipes || []).map((recipe, idx) => {
-    const ings = (recipe.ingredients || []).map(ing => `
-      <div class="recipe-ingredient">
-        <span class="recipe-ingredient-icon">${GROUP_ICONS[ing.group] || '🍽️'}</span>
-        <span class="recipe-ingredient-name">${ing.item}</span>
-        <span class="recipe-ingredient-amount">${ing.amount}</span>
-      </div>`).join('');
-    const steps = (recipe.steps || []).map((s, i) => `
-      <li class="recipe-step"><span class="recipe-step-num">${i+1}</span><span>${s}</span></li>`).join('');
-    const notes = recipe.notes ? `<div class="recipe-notes">💡 ${recipe.notes}</div>` : '';
-    return `
-      <div class="recipe-card" id="rcard-${idx}">
-        <div class="recipe-card-header" onclick="toggleRecipeCard(${idx})">
-          <span class="recipe-card-title">${recipe.recipe_name}</span>
-          <span class="recipe-card-chevron">▼</span>
-        </div>
-        <div class="recipe-card-body">
-          <p class="recipe-section-label">Ingredientes</p>
-          <div>${ings}</div>
-          <p class="recipe-section-label">Preparación</p>
-          <ol class="recipe-steps-list">${steps}</ol>
-          ${notes}
-        </div>
-      </div>`;
-  }).join('');
-
-  content.innerHTML = `
-    <p class="recipe-modal-title">Recetas para ${MEAL_LABELS[meal]}</p>
-    <p class="recipe-modal-sub">Toca una receta para verla</p>
-    ${cardsHtml}`;
-
-  document.getElementById('recipe-modal').classList.add('open');
-  content.scrollTop = 0;
-}
-
-function toggleRecipeCard(idx) {
-  const card = document.getElementById(`rcard-${idx}`);
-  const isOpen = card.classList.contains('open');
-  document.querySelectorAll('.recipe-card').forEach(c => c.classList.remove('open'));
-  if (!isOpen) card.classList.add('open');
-}
-
-function closeRecipeModal() {
-  document.getElementById('recipe-modal').classList.remove('open');
-}
-
-function showTab(tab) {
-  ['inicio','registrar','progreso','equivalencias'].forEach(t => {
-    document.getElementById(`screen-${t}`).className = 'screen' + (t === tab ? ' active' : '');
-    document.getElementById(`tab-${t}`).className = 'tab-btn' + (t === tab ? ' active' : '');
-  });
-  if (tab === 'progreso') {
-    loadProgresoData();
-    selectPeriod('semana');
-  }
-  if (tab === 'registrar') renderRegisterState();
-  if (tab === 'equivalencias') loadEquivalencias();
-  window.scrollTo({ top: 0 });
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function showToast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.className = `toast ${type}`, 2500);
-}
-
-function setLoading(spinnerId, textId, btnId, loading, text) {
-  document.getElementById(spinnerId).classList.toggle('hidden', !loading);
-  document.getElementById(textId).textContent = text;
-  document.getElementById(btnId).disabled = loading;
-}
-
-// ─── Boot ──────────────────────────────────────────────────────────────────────
-if (token) {
-  // Verify token still valid
-  fetch(`${API_BASE}/api/health`, { headers: { 'x-auth-token': token } })
-    .then(r => {
-      if (r.ok) {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').classList.add('visible');
-        initApp();
-      }
-    })
-    .catch(() => {});
-}
 </script>
 </body>
 </html>

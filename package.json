@@ -1,20 +1,20 @@
 {
-  "name": "meditrack",
+  "name": "petitdemi",
   "version": "1.0.0",
   "type": "module",
-  "description": "Diet tracking app for Héctor — IMSS 2000 kcal plan",
-  "main": "api.mjs",
   "scripts": {
     "start": "node api.mjs",
-    "dev": "node serve.mjs",
-    "api": "node api.mjs"
+    "dev": "node serve.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/supabase-js": "^2.99.1",
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1",
-    "openai": "^4.52.7",
-    "puppeteer": "^24.40.0"
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "openai": "^6.29.0",
+    "resend": "^4.5.2"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.0.0"
   }
 }

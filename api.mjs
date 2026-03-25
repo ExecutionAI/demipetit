@@ -1,632 +1,321 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-import multer from 'multer';
-import { buildEquivalentsPromptContext, equivalents, FOOD_GROUPS } from './data/equivalents.js';
-import { MEAL_PLAN, PIPELINE_ORDER, getNextMeal, DAILY_TOTALS, MEAL_LABELS } from './data/meal-plan.js';
+import { Resend } from 'resend';
+import { FLAVOR_INGREDIENTS, FILLING_EXTRAS, SMB_BASE, SIZE_MULTIPLIERS } from './data/ingredients.js';
 
-const app  = express();
-const PORT = process.env.PORT || 3001;
+const app = express();
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '20mb' }));
-app.use(express.static('.'));
+app.use(express.json({ limit: '10mb' }));
 
-// ─── Clients ──────────────────────────────────────────────────────────────────
+// ── Clients ──────────────────────────────────────────────────────────────────
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY,
-  { db: { schema: 'meditrack' } }
-);
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { db: { schema: 'petitdemi' } })
+  : null;
+if (supabase) console.log('Supabase connected (petitdemi schema)');
+else          console.warn('Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
-// Multer: keep files in memory for Whisper upload
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-// ─── Auth Middleware ───────────────────────────────────────────────────────────
+// ── Auth middleware ───────────────────────────────────────────────────────────
 
-const requireAuth = (req, res, next) => {
-  const token = req.headers['x-auth-token'];
-  if (!token || token !== process.env.ADMIN_TOKEN) {
-    return res.status(401).json({ error: 'No autorizado' });
+function requireAdmin(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
-};
-
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-
-app.post('/api/auth/login', (req, res) => {
-  const { password } = req.body;
-  if (!password || password !== process.env.ADMIN_TOKEN) {
-    return res.status(401).json({ error: 'Contraseña incorrecta' });
-  }
-  res.json({ token: process.env.ADMIN_TOKEN });
-});
-
-// ─── Timezone helper ──────────────────────────────────────────────────────────
-
-function todayMX() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date());
 }
 
-// ─── Today's status & pipeline ────────────────────────────────────────────────
+// ── Status pipeline ───────────────────────────────────────────────────────────
 
-app.get('/api/today', requireAuth, async (req, res) => {
-  try {
-    const today = todayMX();
+const VALID_TRANSITIONS = {
+  quote_received: ['confirmed', 'cancelled'],
+  confirmed:      ['in_production', 'cancelled'],
+  in_production:  ['ready', 'cancelled'],
+  ready:          ['delivered'],
+  delivered:      [],
+  cancelled:      ['quote_received'],
+};
 
-    const { data: logs, error } = await supabase
-      .from('meal_logs')
-      .select('*')
-      .eq('date', today)
-      .order('logged_at', { ascending: true });
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-    if (error) throw error;
+function parseJSON(raw) {
+  const cleaned = (raw || '')
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim();
+  return JSON.parse(cleaned);
+}
 
-    const loggedMeals = [...new Set(logs.filter(l => l.meal_type !== 'colacion').map(l => l.meal_type))];
-    const nextMeal    = getNextMeal(loggedMeals);
+function esc(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-    // Consumed portions today (sum across all pipeline meals)
-    const consumed = { leche: 0, carne: 0, fruta: 0, verdura: 0, cereales: 0, leguminosas: 0, grasas: 0 };
-    for (const log of logs) {
-      if (log.portions) {
-        for (const [group, qty] of Object.entries(log.portions)) {
-          if (consumed[group] !== undefined) consumed[group] += qty;
-        }
-      }
+// ── PUBLIC: Submit quote ──────────────────────────────────────────────────────
+
+app.post('/api/quotes', async (req, res) => {
+  const {
+    full_name, email, phone,
+    product_type, cake_size, flavor, filling,
+    quantity, decoration_type, decoration_notes,
+    occasion, delivery_date, notes,
+  } = req.body;
+
+  if (!full_name || !email || !product_type || !delivery_date) {
+    return res.status(400).json({ error: 'Missing required fields: full_name, email, product_type, delivery_date' });
+  }
+
+  // Calculate base price
+  const { CAKE_SIZES, OTHER_PRODUCTS } = await import('./data/menu.js');
+  let base_price = 0;
+  let extras_price = 0;
+  if (product_type === 'cake' && cake_size) {
+    const sizeData = CAKE_SIZES.find(s => s.id === cake_size);
+    base_price = sizeData?.price || 0;
+  } else {
+    const prod = OTHER_PRODUCTS.find(p => p.type === product_type);
+    base_price = prod?.price || 0;
+  }
+  const { FILLINGS } = await import('./data/menu.js');
+  const fillingData = FILLINGS.find(f => f.id === filling);
+  if (fillingData?.surcharge) extras_price = fillingData.surcharge;
+
+  const total_price = base_price + extras_price;
+
+  // GPT-4o order summary
+  let ai_summary = null;
+  if (openai) {
+    try {
+      const prompt = `You are a friendly assistant for Petit Demi, a custom bakery in Amsterdam.
+A customer just submitted a cake order. Write a warm, concise 2-sentence summary of their order for the baker to read at a glance.
+Then list any missing or unclear details as "flags".
+Respond ONLY with valid JSON in this exact format:
+{ "summary": "...", "flags": ["..."] }
+
+Order details:
+- Product: ${product_type}${cake_size ? ` (${cake_size})` : ''}
+- Flavor: ${flavor || 'not specified'}
+- Filling: ${filling || 'not specified'}
+- Decoration: ${decoration_type || 'basic'}${decoration_notes ? ` — ${decoration_notes}` : ''}
+- Occasion: ${occasion || 'not specified'}
+- Delivery date: ${delivery_date}
+- Quantity: ${quantity || 1}
+- Customer notes: ${notes || 'none'}`;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 300,
+      });
+      const parsed = parseJSON(response.choices[0]?.message?.content);
+      ai_summary = parsed.summary;
+    } catch (err) {
+      console.error('OpenAI error:', err.message);
     }
+  }
 
-    // Compliance per meal
-    const mealSummary = PIPELINE_ORDER.map(meal => {
-      const mealLogs = logs.filter(l => l.meal_type === meal);
-      const logged   = mealLogs.length > 0;
-      const portions = { leche: 0, carne: 0, fruta: 0, verdura: 0, cereales: 0, leguminosas: 0, grasas: 0 };
-      for (const log of mealLogs) {
-        if (log.portions) {
-          for (const [g, q] of Object.entries(log.portions)) {
-            if (portions[g] !== undefined) portions[g] += q;
-          }
-        }
-      }
-      return { meal, logged, portions, plan: MEAL_PLAN[meal] };
+  if (!supabase) {
+    return res.json({ success: true, message: 'Quote received (DB not configured)', ai_summary });
+  }
+
+  // Upsert client
+  const { data: client, error: clientErr } = await supabase
+    .from('clients')
+    .upsert({ email, full_name, phone }, { onConflict: 'email' })
+    .select()
+    .single();
+
+  if (clientErr) {
+    console.error('Client upsert error:', clientErr);
+    return res.status(500).json({ error: 'Failed to save client' });
+  }
+
+  // Create order
+  const { data: order, error: orderErr } = await supabase
+    .from('orders')
+    .insert({
+      client_id: client.id,
+      product_type,
+      cake_size: cake_size || null,
+      flavor: flavor || null,
+      filling: filling || null,
+      quantity: quantity || 1,
+      decoration_type: decoration_type || 'basic',
+      decoration_notes: decoration_notes || null,
+      occasion: occasion || null,
+      delivery_date,
+      base_price,
+      extras_price,
+      total_price,
+      ai_summary,
+      raw_quote: req.body,
+      internal_notes: notes || null,
+    })
+    .select()
+    .single();
+
+  if (orderErr) {
+    console.error('Order insert error:', orderErr);
+    return res.status(500).json({ error: 'Failed to save order' });
+  }
+
+  // Send emails
+  if (resend) {
+    const FROM = process.env.FROM_EMAIL || 'noreply@petitdemi.com';
+    const DEMI  = process.env.DEMI_EMAIL  || 'info@petitdemi.com';
+
+    // Notify Demi
+    resend.emails.send({
+      from: FROM,
+      to: DEMI,
+      subject: `New order from ${full_name} — ${product_type} for ${delivery_date}`,
+      html: `<h2>New Quote Received</h2>
+<p><strong>Customer:</strong> ${esc(full_name)} (${esc(email)}${phone ? `, ${esc(phone)}` : ''})</p>
+<p><strong>Product:</strong> ${esc(product_type)}${cake_size ? ` — ${esc(cake_size)}` : ''}</p>
+<p><strong>Flavor:</strong> ${esc(flavor || 'Not specified')}</p>
+<p><strong>Filling:</strong> ${esc(filling || 'Not specified')}</p>
+<p><strong>Delivery date:</strong> ${esc(delivery_date)}</p>
+<p><strong>Occasion:</strong> ${esc(occasion || '—')}</p>
+<p><strong>Notes:</strong> ${esc(notes || '—')}</p>
+${ai_summary ? `<hr><p><em>AI Summary: ${esc(ai_summary)}</em></p>` : ''}
+<p><a href="${process.env.ADMIN_URL || 'http://localhost:3000/admin'}" style="background:#C5956C;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Open Admin Dashboard</a></p>`,
+    }).catch(e => console.error('Email to Demi failed:', e.message));
+
+    // Confirm to customer
+    resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: `Your order request is in — Petit Demi`,
+      html: `<h2>Thanks for reaching out, ${esc(full_name.split(' ')[0])}! 🎂</h2>
+<p>I've received your order request and will get back to you within 24–48 hours to confirm availability and details.</p>
+${ai_summary ? `<p><strong>Your order summary:</strong> ${esc(ai_summary)}</p>` : ''}
+<p><strong>Estimated total:</strong> €${total_price.toFixed(2)}</p>
+<p>In the meantime, feel free to reach me on WhatsApp: <a href="https://wa.me/31601089333">0601089333</a></p>
+<p>Warm regards,<br>Demi — Petit Demi 🌸</p>`,
+    }).catch(e => console.error('Email to customer failed:', e.message));
+  }
+
+  res.json({ success: true, orderId: order.id, ai_summary, total_price });
+});
+
+// ── PUBLIC: Quote preview (AI summary for step 3 preview) ────────────────────
+
+app.post('/api/quotes/preview', async (req, res) => {
+  const { product_type, cake_size, flavor, filling, decoration_type, occasion, delivery_date, quantity } = req.body;
+  if (!openai) return res.json({ summary: 'Your order looks great — ready to send!' });
+
+  try {
+    const prompt = `You are a warm, friendly assistant for Petit Demi, a custom bakery in Amsterdam.
+A customer is about to submit a cake order. Write ONE friendly sentence summarising their order — like you're reading it back to them warmly.
+Respond ONLY with valid JSON: { "summary": "..." }
+
+Order: ${product_type}${cake_size ? ' ('+cake_size+')' : ''}${flavor ? ', '+flavor+' flavour' : ''}${filling ? ', '+filling : ''}${decoration_type === 'custom' ? ', custom decoration' : ''}${occasion ? ' for '+occasion : ''}${delivery_date ? ', due '+delivery_date : ''}`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: 120,
     });
-
-    const colaciones = logs.filter(l => l.meal_type === 'colacion');
-
-    res.json({ today, nextMeal, loggedMeals, mealSummary, consumed, dailyTotals: DAILY_TOTALS, colaciones });
+    const parsed = parseJSON(response.choices[0]?.message?.content);
+    res.json({ summary: parsed.summary });
   } catch (err) {
-    console.error(err);
+    console.error('Preview error:', err.message);
+    res.json({ summary: 'Your order is ready to send — Demi will confirm everything shortly!' });
+  }
+});
+
+// ── ADMIN: Stats ──────────────────────────────────────────────────────────────
+
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  if (!supabase) return res.json({ total: 0, quote_received: 0, confirmed: 0, in_production: 0, ready: 0, this_week: 0 });
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const weekEnd = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+
+    const [total, qr, conf, prod, ready, thisWeek, urgent] = await Promise.all([
+      supabase.from('orders').select('id', { count: 'exact', head: true }),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'quote_received'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'confirmed'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'in_production'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'ready'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).gte('delivery_date', today).lte('delivery_date', weekEnd).not('status', 'in', '("delivered","cancelled")'),
+      supabase.from('orders').select('id', { count: 'exact', head: true }).gte('delivery_date', today).lte('delivery_date', new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]).not('status', 'in', '("delivered","cancelled")'),
+    ]);
+
+    res.json({
+      total:          total.count    || 0,
+      quote_received: qr.count       || 0,
+      confirmed:      conf.count     || 0,
+      in_production:  prod.count     || 0,
+      ready:          ready.count    || 0,
+      this_week:      thisWeek.count || 0,
+      urgent:         urgent.count   || 0,
+    });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ─── Equivalents ──────────────────────────────────────────────────────────────
+// ── ADMIN: Orders list ────────────────────────────────────────────────────────
 
-app.get('/api/equivalents', requireAuth, (req, res) => {
-  res.json({ groups: FOOD_GROUPS, items: equivalents });
-});
+app.get('/api/admin/orders', requireAdmin, async (req, res) => {
+  if (!supabase) return res.json([]);
 
-// ─── Meal Logs ────────────────────────────────────────────────────────────────
-
-// GET all logs for a given date range
-app.get('/api/logs', requireAuth, async (req, res) => {
   try {
-    const { from, to, limit = 50 } = req.query;
+    const { status, q } = req.query;
     let query = supabase
-      .from('meal_logs')
-      .select('*')
-      .order('logged_at', { ascending: false })
-      .limit(parseInt(limit));
+      .from('orders')
+      .select('*, client:clients(full_name, email, phone)')
+      .order('delivery_date', { ascending: true });
 
-    if (from) query = query.gte('date', from);
-    if (to)   query = query.lte('date', to);
+    if (status && status !== 'all') query = query.eq('status', status);
 
     const { data, error } = await query;
     if (error) throw error;
-    res.json(data);
+
+    let rows = data;
+    if (q) {
+      const lq = q.toLowerCase();
+      rows = rows.filter(r =>
+        r.client?.full_name?.toLowerCase().includes(lq) ||
+        r.client?.email?.toLowerCase().includes(lq) ||
+        r.flavor?.toLowerCase().includes(lq)
+      );
+    }
+
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST a confirmed meal log entry (after GPT analysis & user confirmation)
-app.post('/api/logs', requireAuth, async (req, res) => {
+// ── ADMIN: Single order ───────────────────────────────────────────────────────
+
+app.get('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  if (!supabase) return res.status(404).json({ error: 'Not found' });
+
   try {
-    const { meal_type, portions, input_type, description, gpt_analysis, date } = req.body;
-
-    if (!meal_type || !portions) {
-      return res.status(400).json({ error: 'meal_type y portions son requeridos' });
-    }
-
-    // Pipeline enforcement: for desayuno/comida/cena, check sequence
-    if (PIPELINE_ORDER.includes(meal_type)) {
-      const today = date || todayMX();
-      const { data: existing } = await supabase
-        .from('meal_logs')
-        .select('meal_type')
-        .eq('date', today)
-        .in('meal_type', PIPELINE_ORDER);
-
-      const loggedTypes = [...new Set((existing || []).map(l => l.meal_type))];
-      const expectedNext = getNextMeal(loggedTypes);
-
-      if (expectedNext !== meal_type && expectedNext !== 'completed') {
-        return res.status(422).json({
-          error: `Debes registrar ${expectedNext} primero antes de registrar ${meal_type}.`,
-          expectedNext,
-        });
-      }
-    }
-
     const { data, error } = await supabase
-      .from('meal_logs')
-      .insert({
-        meal_type,
-        portions,
-        input_type: input_type || 'manual',
-        description,
-        gpt_analysis,
-        date: date || todayMX(),
-        logged_at: new Date().toISOString(),
-      })
-      .select()
+      .from('orders')
+      .select('*, client:clients(full_name, email, phone)')
+      .eq('id', req.params.id)
       .single();
-
-    if (error) throw error;
-    res.status(201).json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// DELETE a log entry
-app.delete('/api/logs/:id', requireAuth, async (req, res) => {
-  try {
-    const { error } = await supabase.from('meal_logs').delete().eq('id', req.params.id);
-    if (error) throw error;
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── GPT Food Analysis ────────────────────────────────────────────────────────
-
-const EQUIVALENTS_CONTEXT = buildEquivalentsPromptContext();
-
-const RECIPE_SYSTEM_PROMPT = `Eres un nutriólogo digital y chef mexicano experto en el sistema de equivalentes IMSS.
-Propón TRES recetas mexicanas distintas y prácticas para el tiempo de comida indicado.
-Cada receta debe usar EXACTAMENTE las porciones del plan de Héctor.
-
-Plan de porciones por tiempo de comida:
-${JSON.stringify(MEAL_PLAN, null, 2)}
-
-Equivalentes disponibles (usa SOLO alimentos de esta lista):
-${EQUIVALENTS_CONTEXT}
-
-Reglas:
-- Varía los ingredientes entre las 3 recetas (no repitas los mismos alimentos principales).
-- Cada receta cubre EXACTAMENTE las porciones del plan para ese tiempo.
-- Grupos con 0 porciones NO aparecen.
-- Máximo 6 pasos por receta, lenguaje sencillo.
-- Responde ÚNICAMENTE con JSON válido, sin markdown.
-
-Estructura exacta:
-{
-  "meal_type": "desayuno|comida|cena",
-  "recipes": [
-    {
-      "recipe_name": "Nombre de la receta",
-      "servings": "descripción",
-      "ingredients": [
-        { "group": "grupo", "item": "nombre", "amount": "cantidad con unidad", "portions": 1 }
-      ],
-      "steps": ["Paso 1...", "Paso 2..."],
-      "notes": "observación opcional"
-    }
-  ]
-}`;
-
-const ANALYSIS_SYSTEM_PROMPT = `Eres un nutriólogo digital experto en el sistema mexicano de equivalentes alimentarios (IMSS).
-Tu tarea es analizar lo que comió el paciente y mapear cada alimento al grupo de intercambios correspondiente.
-
-Tabla de equivalentes disponibles:
-${EQUIVALENTS_CONTEXT}
-
-Responde ÚNICAMENTE con JSON válido, sin markdown, sin explicaciones, con esta estructura exacta:
-{
-  "identified_foods": [
-    { "food": "nombre del alimento", "group": "leche|carne|fruta|verdura|cereales|leguminosas|grasas", "portions": 1.0, "notes": "descripción opcional" }
-  ],
-  "portions_summary": {
-    "leche": 0,
-    "carne": 0,
-    "fruta": 0,
-    "verdura": 0,
-    "cereales": 0,
-    "leguminosas": 0,
-    "grasas": 0
-  },
-  "confidence": "alta|media|baja",
-  "notes": "observación general si aplica"
-}`;
-
-// Analyze a text description
-app.post('/api/analyze/text', requireAuth, async (req, res) => {
-  try {
-    const { description, meal_type } = req.body;
-    if (!description) return res.status(400).json({ error: 'description requerida' });
-
-    const userPrompt = `El paciente comió en ${meal_type || 'una comida'}: "${description}"
-Identifica los grupos de alimentos y las porciones (intercambios) según la tabla de equivalentes.`;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        { role: 'user',   content: userPrompt },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 1000,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Analyze an image (base64)
-app.post('/api/analyze/image', requireAuth, async (req, res) => {
-  try {
-    const { image_base64, image_type = 'image/jpeg', meal_type, extra_description } = req.body;
-    if (!image_base64) return res.status(400).json({ error: 'image_base64 requerido' });
-
-    const userContent = [
-      {
-        type: 'text',
-        text: `Analiza esta imagen de ${meal_type ? 'la comida "' + meal_type + '"' : 'una comida'}.
-${extra_description ? 'Descripción adicional del paciente: "' + extra_description + '"' : ''}
-Identifica todos los alimentos visibles y calcula sus porciones (intercambios) según la tabla de equivalentes.`,
-      },
-      {
-        type: 'image_url',
-        image_url: { url: `data:${image_type};base64,${image_base64}`, detail: 'high' },
-      },
-    ];
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        { role: 'user',   content: userContent },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 1200,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Transcribe voice note + analyze
-app.post('/api/analyze/voice', requireAuth, upload.single('audio'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Archivo de audio requerido' });
-
-    const meal_type        = req.body.meal_type;
-    const extra_image_b64  = req.body.image_base64;
-
-    // Step 1: Transcribe with Whisper
-    const { Readable } = await import('stream');
-    const audioFile = new File([req.file.buffer], req.file.originalname || 'audio.m4a', {
-      type: req.file.mimetype || 'audio/m4a',
-    });
-
-    const transcription = await openai.audio.transcriptions.create({
-      file:     audioFile,
-      model:    'whisper-1',
-      language: 'es',
-    });
-
-    const transcript = transcription.text;
-
-    // Step 2: Analyze — with or without image
-    let result;
-    if (extra_image_b64) {
-      // Combined: voice + image
-      const userContent = [
-        {
-          type: 'text',
-          text: `El paciente describió su comida: "${transcript}"
-También adjuntó una foto. Analiza ambos para identificar los alimentos y calcular las porciones.
-Comida: ${meal_type || 'no especificada'}.`,
-        },
-        {
-          type: 'image_url',
-          image_url: { url: `data:image/jpeg;base64,${extra_image_b64}`, detail: 'high' },
-        },
-      ];
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-          { role: 'user',   content: userContent },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 1200,
-      });
-      result = JSON.parse(response.choices[0].message.content);
-    } else {
-      // Voice only
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-          { role: 'user',   content: `El paciente describió su comida (${meal_type || ''}): "${transcript}". Identifica los alimentos y porciones.` },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 1000,
-      });
-      result = JSON.parse(response.choices[0].message.content);
-    }
-
-    res.json({ transcript, ...result });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Recipe Suggestion ────────────────────────────────────────────────────────
-
-app.post('/api/suggest-recipe', requireAuth, async (req, res) => {
-  try {
-    const { meal_type } = req.body;
-    const VALID = ['desayuno', 'comida', 'cena'];
-    if (!meal_type || !VALID.includes(meal_type))
-      return res.status(400).json({ error: `meal_type debe ser uno de: ${VALID.join(', ')}` });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: RECIPE_SYSTEM_PROMPT },
-        { role: 'user',   content: `Sugiere 3 recetas para ${MEAL_LABELS[meal_type]}. Porciones requeridas: ${JSON.stringify(MEAL_PLAN[meal_type])}.` },
-      ],
-      response_format: { type: 'json_object' },
-      max_tokens: 2000,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Stats & Progress ─────────────────────────────────────────────────────────
-
-// Daily compliance for a date range (for charts)
-app.get('/api/stats/daily', requireAuth, async (req, res) => {
-  try {
-    const { from, to } = req.query;
-    if (!from || !to) return res.status(400).json({ error: 'from y to son requeridos' });
-
-    const { data: logs, error } = await supabase
-      .from('meal_logs')
-      .select('date, meal_type, portions')
-      .gte('date', from)
-      .lte('date', to)
-      .order('date', { ascending: true });
-
-    if (error) throw error;
-
-    // Group by date
-    const byDate = {};
-    for (const log of logs) {
-      if (!byDate[log.date]) byDate[log.date] = [];
-      byDate[log.date].push(log);
-    }
-
-    const result = Object.entries(byDate).map(([date, dayLogs]) => {
-      const consumed = { leche: 0, carne: 0, fruta: 0, verdura: 0, cereales: 0, leguminosas: 0, grasas: 0 };
-      const mealsLogged = new Set();
-
-      for (const log of dayLogs) {
-        if (PIPELINE_ORDER.includes(log.meal_type)) mealsLogged.add(log.meal_type);
-        if (log.portions) {
-          for (const [g, q] of Object.entries(log.portions)) {
-            if (consumed[g] !== undefined) consumed[g] += q;
-          }
-        }
-      }
-
-      // Compliance: % of target portions hit (capped at 100%)
-      let totalTarget  = 0;
-      let totalHit     = 0;
-      for (const [group, target] of Object.entries(DAILY_TOTALS)) {
-        totalTarget += target;
-        totalHit    += Math.min(consumed[group], target);
-      }
-      const compliance = totalTarget > 0 ? Math.round((totalHit / totalTarget) * 100) : 0;
-      const allMealsDone = PIPELINE_ORDER.every(m => mealsLogged.has(m));
-
-      return { date, consumed, compliance, allMealsDone, mealsLogged: [...mealsLogged] };
-    });
-
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Streak calculation
-app.get('/api/stats/streak', requireAuth, async (req, res) => {
-  try {
-    const { data: logs, error } = await supabase
-      .from('meal_logs')
-      .select('date, meal_type')
-      .in('meal_type', PIPELINE_ORDER)
-      .order('date', { ascending: false });
-
-    if (error) throw error;
-
-    // Group by date: check if all 3 pipeline meals are present
-    const dateMap = {};
-    for (const log of logs) {
-      if (!dateMap[log.date]) dateMap[log.date] = new Set();
-      dateMap[log.date].add(log.meal_type);
-    }
-
-    const completeDates = Object.entries(dateMap)
-      .filter(([, meals]) => PIPELINE_ORDER.every(m => meals.has(m)))
-      .map(([date]) => date)
-      .sort()
-      .reverse();
-
-    // Current streak: count consecutive days ending today or yesterday
-    let streak = 0;
-    const todayStr  = todayMX();
-    const yestStr   = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date(Date.now() - 86400000));
-
-    // Allow streak if today is complete OR yesterday was the last complete day
-    let cursor = completeDates[0] === todayStr || completeDates[0] === yestStr ? completeDates[0] : null;
-
-    if (cursor) {
-      for (const d of completeDates) {
-        if (d === cursor) {
-          streak++;
-          const prev = new Date(cursor);
-          prev.setDate(prev.getDate() - 1);
-          cursor = prev.toISOString().split('T')[0];
-        } else {
-          break;
-        }
-      }
-    }
-
-    // Best streak ever
-    let best = 0, current = 0, prevDate = null;
-    for (const d of [...completeDates].reverse()) {
-      if (!prevDate) {
-        current = 1;
-      } else {
-        const diff = (new Date(d) - new Date(prevDate)) / 86400000;
-        current = diff === 1 ? current + 1 : 1;
-      }
-      best = Math.max(best, current);
-      prevDate = d;
-    }
-
-    const todayComplete = completeDates[0] === todayStr;
-
-    res.json({
-      currentStreak: streak,
-      bestStreak:    best,
-      totalCompleteDays: completeDates.length,
-      todayComplete,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Weekly summary (last 7 days)
-app.get('/api/stats/week', requireAuth, async (req, res) => {
-  try {
-    const to   = todayMX();
-    const from = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(new Date(Date.now() - 6 * 86400000));
-
-    // Reuse daily stats logic
-    const fakeReq = { query: { from, to }, headers: req.headers };
-    let dailyData;
-    await new Promise((resolve) => {
-      const fakeRes = {
-        json: (d) => { dailyData = d; resolve(); },
-        status: () => fakeRes,
-      };
-      // Call the handler directly
-      supabase.from('meal_logs').select('date, meal_type, portions')
-        .gte('date', from).lte('date', to).order('date', { ascending: true })
-        .then(({ data: logs, error }) => {
-          if (error) { dailyData = []; resolve(); return; }
-          const byDate = {};
-          for (const log of logs) {
-            if (!byDate[log.date]) byDate[log.date] = [];
-            byDate[log.date].push(log);
-          }
-          dailyData = Object.entries(byDate).map(([date, dayLogs]) => {
-            const consumed = { leche: 0, carne: 0, fruta: 0, verdura: 0, cereales: 0, leguminosas: 0, grasas: 0 };
-            const mealsLogged = new Set();
-            for (const log of dayLogs) {
-              if (PIPELINE_ORDER.includes(log.meal_type)) mealsLogged.add(log.meal_type);
-              if (log.portions) {
-                for (const [g, q] of Object.entries(log.portions)) {
-                  if (consumed[g] !== undefined) consumed[g] += q;
-                }
-              }
-            }
-            let totalTarget = 0, totalHit = 0;
-            for (const [group, target] of Object.entries(DAILY_TOTALS)) {
-              totalTarget += target;
-              totalHit    += Math.min(consumed[group], target);
-            }
-            const compliance  = totalTarget > 0 ? Math.round((totalHit / totalTarget) * 100) : 0;
-            const allMealsDone = PIPELINE_ORDER.every(m => mealsLogged.has(m));
-            return { date, consumed, compliance, allMealsDone };
-          });
-          resolve();
-        });
-    });
-
-    const avgCompliance = dailyData.length
-      ? Math.round(dailyData.reduce((s, d) => s + d.compliance, 0) / dailyData.length)
-      : 0;
-    const completeDays = dailyData.filter(d => d.allMealsDone).length;
-
-    res.json({ from, to, days: dailyData, avgCompliance, completeDays, totalDays: dailyData.length });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ─── Weight Log ───────────────────────────────────────────────────────────────
-
-app.post('/api/weight', requireAuth, async (req, res) => {
-  try {
-    const { weight_kg, date } = req.body;
-    if (!weight_kg) return res.status(400).json({ error: 'weight_kg requerido' });
-
-    const { data, error } = await supabase
-      .from('weight_logs')
-      .insert({ weight_kg, date: date || todayMX() })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.status(201).json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/api/weight', requireAuth, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('weight_logs')
-      .select('*')
-      .order('date', { ascending: true });
 
     if (error) throw error;
     res.json(data);
@@ -635,12 +324,165 @@ app.get('/api/weight', requireAuth, async (req, res) => {
   }
 });
 
-// ─── Health check ─────────────────────────────────────────────────────────────
+// ── ADMIN: Update order ───────────────────────────────────────────────────────
 
-app.get('/api/health', (req, res) => res.json({ ok: true, service: 'meditrack-api' }));
+app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'DB not configured' });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+  const { status, base_price, extras_price, total_price, internal_notes, delivery_date } = req.body;
+
+  // Validate status transition
+  if (status) {
+    const { data: current } = await supabase
+      .from('orders')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!current) return res.status(404).json({ error: 'Order not found' });
+
+    const allowed = VALID_TRANSITIONS[current.status] || [];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid transition: ${current.status} → ${status}. Allowed: ${allowed.join(', ') || 'none'}`,
+      });
+    }
+  }
+
+  try {
+    const updates = {};
+    if (status !== undefined)         updates.status         = status;
+    if (base_price !== undefined)     updates.base_price     = base_price;
+    if (extras_price !== undefined)   updates.extras_price   = extras_price;
+    if (total_price !== undefined)    updates.total_price    = total_price;
+    if (internal_notes !== undefined) updates.internal_notes = internal_notes;
+    if (delivery_date !== undefined)  updates.delivery_date  = delivery_date;
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── ADMIN: Delete order ───────────────────────────────────────────────────────
+
+app.delete('/api/admin/orders/:id', requireAdmin, async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'DB not configured' });
+
+  try {
+    const { error } = await supabase.from('orders').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── ADMIN: Shopping list ──────────────────────────────────────────────────────
+
+app.post('/api/admin/shopping-list', requireAdmin, async (req, res) => {
+  const { order_ids } = req.body;
+  if (!order_ids?.length) return res.status(400).json({ error: 'order_ids required' });
+
+  if (!supabase) return res.status(503).json({ error: 'DB not configured' });
+
+  try {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('flavor, filling, cake_size, product_type, quantity')
+      .in('id', order_ids);
+
+    if (error) throw error;
+
+    // Consolidate ingredients
+    const totals = {}; // key: `${name}|${unit}` → { name, unit, group, amount }
+
+    function addIngredient(item, multiplier = 1) {
+      const key = `${item.name}|${item.unit}`;
+      if (!totals[key]) totals[key] = { name: item.name, unit: item.unit, group: item.group, amount: 0 };
+      totals[key].amount += item.amount * multiplier;
+    }
+
+    for (const order of orders) {
+      const qty = order.quantity || 1;
+      const sizeMult = (order.cake_size ? SIZE_MULTIPLIERS[order.cake_size] : 1) || 1;
+      const totalMult = qty * sizeMult;
+
+      // Cake sponge ingredients
+      if (order.flavor && FLAVOR_INGREDIENTS[order.flavor]) {
+        for (const ing of FLAVOR_INGREDIENTS[order.flavor]) {
+          addIngredient(ing, totalMult);
+        }
+      }
+
+      // SMB base (for cakes)
+      if (order.product_type === 'cake') {
+        for (const ing of SMB_BASE) {
+          addIngredient(ing, totalMult);
+        }
+      }
+
+      // Filling extras
+      if (order.filling && FILLING_EXTRAS[order.filling]) {
+        for (const ing of FILLING_EXTRAS[order.filling]) {
+          addIngredient(ing, totalMult);
+        }
+      }
+    }
+
+    // Group by category
+    const groups = { dry: [], dairy: [], eggs: [], extras: [] };
+    for (const item of Object.values(totals)) {
+      const grp = groups[item.group] || groups.extras;
+      grp.push({ name: item.name, amount: Math.ceil(item.amount), unit: item.unit });
+    }
+    for (const grp of Object.values(groups)) grp.sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ groups, order_count: orders.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── ADMIN: Clients ────────────────────────────────────────────────────────────
+
+app.get('/api/admin/clients', requireAdmin, async (req, res) => {
+  if (!supabase) return res.json([]);
+
+  try {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*, orders(id)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data.map(c => ({
+      ...c,
+      order_count: c.orders?.length || 0,
+      orders: undefined,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+app.get('/health', (req, res) => res.json({ status: 'ok', service: 'petitdemi-api' }));
+
+// ── Start ─────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`MediTrack API running on port ${PORT}`);
+  console.log(`\n  Petit Demi API`);
+  console.log(`  http://localhost:${PORT}`);
+  console.log(`  Health: http://localhost:${PORT}/health\n`);
 });

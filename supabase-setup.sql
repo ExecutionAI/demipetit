@@ -1,45 +1,65 @@
--- ═══════════════════════════════════════════════════════════════════
--- MediTrack — Supabase Setup (public schema, no schema routing needed)
--- Run this in: Supabase Dashboard → SQL Editor
--- ═══════════════════════════════════════════════════════════════════
+-- Petit Demi — Supabase schema setup
+-- Run in the ExecutionAI Lab project (shared sandbox)
+-- After running: Settings → API → Exposed schemas → add "petitdemi" → Save
 
--- If you already ran the previous version, migrate the tables first:
--- ALTER TABLE meditrack.meal_logs SET SCHEMA public;
--- ALTER TABLE meditrack.weight_logs SET SCHEMA public;
--- DROP SCHEMA meditrack;
+-- 1. Create schema
+CREATE SCHEMA IF NOT EXISTS petitdemi;
 
--- ── Fresh setup ────────────────────────────────────────────────────
-
--- 1. Meal logs (core table)
-CREATE TABLE IF NOT EXISTS meal_logs (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  meal_type    text NOT NULL CHECK (meal_type IN ('desayuno', 'comida', 'cena', 'colacion')),
-  date         date NOT NULL DEFAULT CURRENT_DATE,
-  logged_at    timestamptz NOT NULL DEFAULT now(),
-  portions     jsonb NOT NULL DEFAULT '{}',
-  input_type   text CHECK (input_type IN ('foto_menu', 'foto_comida', 'voz', 'manual')),
-  description  text,
-  gpt_analysis jsonb,
-  created_at   timestamptz DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS meal_logs_date_idx      ON meal_logs (date DESC);
-CREATE INDEX IF NOT EXISTS meal_logs_meal_type_idx ON meal_logs (meal_type);
-
--- 2. Weight log
-CREATE TABLE IF NOT EXISTS weight_logs (
+-- 2. Clients table
+CREATE TABLE IF NOT EXISTS petitdemi.clients (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  weight_kg  numeric(5,2) NOT NULL,
-  date       date NOT NULL DEFAULT CURRENT_DATE,
-  notes      text,
+  full_name  text NOT NULL,
+  email      text UNIQUE NOT NULL,
+  phone      text,
+  source     text DEFAULT 'form',
   created_at timestamptz DEFAULT now()
 );
 
--- Insert initial weight from doctor's record (skip if already exists)
-INSERT INTO weight_logs (weight_kg, date, notes)
-VALUES (179.3, '2023-12-07', 'Peso inicial — Doctor Marco Polo Rodríguez Torres (IMSS)')
-ON CONFLICT DO NOTHING;
+-- 3. Orders table
+CREATE TABLE IF NOT EXISTS petitdemi.orders (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id        uuid REFERENCES petitdemi.clients(id) ON DELETE SET NULL,
+  status           text DEFAULT 'quote_received'
+                   CHECK (status IN ('quote_received','confirmed','in_production','ready','delivered','cancelled')),
+  product_type     text NOT NULL,
+  cake_size        text,
+  flavor           text,
+  filling          text,
+  quantity         int DEFAULT 1,
+  decoration_type  text DEFAULT 'basic' CHECK (decoration_type IN ('basic','custom')),
+  decoration_notes text,
+  occasion         text,
+  delivery_date    date NOT NULL,
+  base_price       numeric(10,2),
+  extras_price     numeric(10,2) DEFAULT 0,
+  total_price      numeric(10,2),
+  ai_summary       text,
+  raw_quote        jsonb,
+  internal_notes   text,
+  created_at       timestamptz DEFAULT now(),
+  updated_at       timestamptz DEFAULT now()
+);
 
--- ═══════════════════════════════════════════════════════════════════
--- No schema exposure needed — tables live in public schema.
--- ═══════════════════════════════════════════════════════════════════
+-- 4. Auto-update updated_at trigger
+CREATE OR REPLACE FUNCTION petitdemi.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER orders_updated_at
+  BEFORE UPDATE ON petitdemi.orders
+  FOR EACH ROW EXECUTE FUNCTION petitdemi.set_updated_at();
+
+-- 5. Grant permissions
+GRANT USAGE ON SCHEMA petitdemi TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA petitdemi TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA petitdemi TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA petitdemi GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA petitdemi GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+
+-- 6. Sample data (optional, for testing)
+-- INSERT INTO petitdemi.clients (full_name, email, phone) VALUES
+--   ('Anna de Vries', 'anna@example.com', '0612345678');

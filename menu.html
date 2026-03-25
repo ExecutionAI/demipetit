@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Menu — Petit Demi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream:   #FAF7F2;
+    --ink:     #1C1208;
+    --accent:  #C5956C;
+    --blush:   #F2C4BB;
+    --muted:   #8C7B72;
+    --surface: #FFFFFF;
+    --border:  #EAE3DB;
+    --serif:   'Cormorant Garamond', Georgia, serif;
+    --sans:    'DM Sans', system-ui, sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--cream); color: var(--ink); font-family: var(--sans); overflow-x: hidden; }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 48px;
+    background: rgba(250,247,242,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: 0.05em; color: var(--ink); text-decoration: none; }
+  .nav-links { display: flex; align-items: center; gap: 36px; }
+  .nav-links a { font-family: var(--sans); font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); text-decoration: none; opacity: 0.7; transition: opacity 0.2s; }
+  .nav-links a:hover, .nav-links a.active { opacity: 1; }
+  .nav-cta { background: var(--ink); color: var(--cream) !important; padding: 10px 22px; border-radius: 2px; opacity: 1 !important; transition: background 0.2s !important; }
+  .nav-cta:hover { background: var(--accent) !important; }
+  .nav-burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
+  .nav-burger span { width: 24px; height: 1.5px; background: var(--ink); display: block; }
+  .mobile-menu { display: none; position: fixed; inset: 0; z-index: 99; background: var(--cream); flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { font-family: var(--serif); font-size: 32px; font-weight: 300; color: var(--ink); text-decoration: none; }
+  .mobile-close { position: absolute; top: 28px; right: 32px; font-size: 28px; cursor: pointer; background: none; border: none; color: var(--ink); }
+
+  /* Hero */
+  .menu-hero {
+    padding: 160px 48px 80px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;
+    background: linear-gradient(to bottom right, #FEFCF9, var(--cream));
+  }
+  .hero-text .eyebrow { font-family: var(--sans); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+  .hero-text h1 { font-family: var(--serif); font-size: clamp(52px, 7vw, 96px); font-weight: 300; line-height: 1.0; }
+  .hero-text h1 em { font-style: italic; color: var(--accent); }
+  .hero-text p { font-family: var(--sans); font-size: 16px; font-weight: 300; color: var(--muted); margin-top: 20px; max-width: 380px; line-height: 1.7; }
+  .hero-note {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 28px 32px; max-width: 300px; flex-shrink: 0; border-radius: 2px;
+    box-shadow: 0 8px 32px rgba(28,18,8,0.06);
+  }
+  .hero-note p { font-family: var(--serif); font-size: 16px; font-style: italic; color: var(--muted); line-height: 1.7; }
+  .hero-note a { color: var(--accent); }
+
+  /* Filter tabs */
+  .filter-bar {
+    position: sticky; top: 73px; z-index: 50;
+    background: rgba(250,247,242,0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 48px; display: flex; gap: 0; overflow-x: auto;
+  }
+  .filter-tab {
+    font-family: var(--sans); font-size: 13px; font-weight: 400;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); background: none; border: none; cursor: pointer;
+    padding: 20px 28px; border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s; white-space: nowrap;
+  }
+  .filter-tab:hover { color: var(--ink); }
+  .filter-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  /* Content sections */
+  .menu-content { padding: 0 48px 100px; max-width: 1200px; }
+
+  .menu-block { padding: 72px 0 0; }
+  .block-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .block-title { font-family: var(--serif); font-size: clamp(32px, 4vw, 48px); font-weight: 300; }
+  .block-title em { font-style: italic; color: var(--accent); }
+  .block-note { font-family: var(--sans); font-size: 13px; color: var(--muted); font-weight: 300; }
+
+  /* Cake sizes grid */
+  .sizes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .size-card {
+    background: var(--surface); padding: 36px 28px;
+    transition: background 0.2s; position: relative; overflow: hidden;
+  }
+  .size-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent); transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .size-card:hover::before { transform: scaleX(1); }
+  .size-card:hover { background: #FEFCF9; }
+  .size-name { font-family: var(--serif); font-size: 22px; font-weight: 400; margin-bottom: 6px; }
+  .size-sub { font-family: var(--sans); font-size: 13px; color: var(--muted); font-weight: 300; margin-bottom: 4px; }
+  .size-serves { font-family: var(--sans); font-size: 12px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 20px; }
+  .size-price { font-family: var(--serif); font-size: 36px; font-weight: 300; color: var(--ink); }
+  .size-from { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Other products grid */
+  .products-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .product-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 36px 28px; border-radius: 2px;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+  .product-card:hover { box-shadow: 0 12px 40px rgba(28,18,8,0.08); transform: translateY(-3px); }
+  .product-emoji { font-size: 32px; margin-bottom: 20px; }
+  .product-name { font-family: var(--serif); font-size: 26px; font-weight: 300; margin-bottom: 6px; }
+  .product-serves { font-family: var(--sans); font-size: 12px; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 12px; }
+  .product-desc { font-family: var(--sans); font-size: 14px; font-weight: 300; color: var(--muted); line-height: 1.7; margin-bottom: 16px; }
+  .product-flavors { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .flavor-tag {
+    font-family: var(--sans); font-size: 11px; font-weight: 400;
+    background: var(--cream); border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 60px; color: var(--muted);
+  }
+  .product-price { font-family: var(--serif); font-size: 32px; font-weight: 300; }
+  .product-price-note { font-family: var(--sans); font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Flavours section */
+  .flavours-section { padding: 72px 0 0; }
+  .flavours-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 32px; }
+  .flavour-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 24px 20px; text-align: center; border-radius: 2px;
+    transition: background 0.2s, border-color 0.2s;
+    cursor: default;
+  }
+  .flavour-card:hover { background: var(--blush); border-color: var(--blush); }
+  .flavour-card-name { font-family: var(--serif); font-size: 18px; font-style: italic; font-weight: 300; color: var(--ink); }
+
+  /* Fillings section */
+  .fillings-section { padding: 72px 0 0; }
+  .fillings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; background: var(--border); border: 1px solid var(--border); margin-top: 32px; }
+  .filling-row {
+    background: var(--surface); padding: 20px 28px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .filling-name { font-family: var(--serif); font-size: 18px; font-weight: 400; }
+  .filling-badge {
+    font-family: var(--sans); font-size: 11px; font-weight: 500;
+    background: var(--cream); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 60px; color: var(--muted); white-space: nowrap;
+  }
+  .filling-badge.surcharge { background: rgba(197,149,108,0.12); border-color: var(--accent); color: var(--accent); }
+
+  /* Custom decoration box */
+  .custom-deco {
+    margin-top: 48px; background: var(--surface); border: 1px solid var(--border);
+    padding: 36px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  }
+  .custom-deco-text h3 { font-family: var(--serif); font-size: 28px; font-weight: 400; margin-bottom: 8px; }
+  .custom-deco-text p { font-family: var(--sans); font-size: 14px; font-weight: 300; color: var(--muted); line-height: 1.6; }
+
+  /* Order CTA banner */
+  .order-cta {
+    margin-top: 80px; background: var(--ink);
+    padding: 80px 60px; display: flex; align-items: center; justify-content: space-between; gap: 40px;
+  }
+  .order-cta-text h2 { font-family: var(--serif); font-size: clamp(32px, 4vw, 52px); font-weight: 300; color: var(--cream); margin-bottom: 12px; }
+  .order-cta-text h2 em { font-style: italic; color: var(--blush); }
+  .order-cta-text p { font-family: var(--sans); font-size: 15px; font-weight: 300; color: rgba(250,247,242,0.55); }
+  .btn-primary { background: var(--cream); color: var(--ink); padding: 15px 36px; font-family: var(--sans); font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; border-radius: 2px; transition: background 0.2s, transform 0.15s; display: inline-block; white-space: nowrap; }
+  .btn-primary:hover { background: var(--blush); transform: translateY(-1px); }
+
+  /* Footnote */
+  .menu-footnote { padding: 48px 0 0; border-top: 1px solid var(--border); margin-top: 80px; }
+  .menu-footnote p { font-family: var(--sans); font-size: 13px; font-weight: 300; color: var(--muted); line-height: 1.8; }
+  .menu-footnote a { color: var(--accent); }
+
+  /* Footer */
+  footer { background: var(--ink); color: var(--cream); padding: 60px 48px 32px; margin-top: 0; }
+  .footer-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; margin-bottom: 48px; }
+  .footer-logo { font-family: var(--serif); font-size: 26px; font-weight: 300; color: var(--cream); margin-bottom: 10px; }
+  .footer-tagline { font-family: var(--sans); font-size: 13px; font-weight: 300; color: rgba(250,247,242,0.45); }
+  .footer-links { display: flex; gap: 60px; }
+  .footer-col-title { font-family: var(--sans); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(250,247,242,0.35); margin-bottom: 16px; }
+  .footer-col a { display: block; font-family: var(--sans); font-size: 14px; font-weight: 300; color: rgba(250,247,242,0.65); text-decoration: none; margin-bottom: 10px; transition: color 0.2s; }
+  .footer-col a:hover { color: var(--cream); }
+  .footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .footer-legal { font-family: var(--sans); font-size: 12px; font-weight: 300; color: rgba(250,247,242,0.3); }
+  .footer-social { display: flex; gap: 20px; }
+  .footer-social a { font-family: var(--sans); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(250,247,242,0.4); text-decoration: none; transition: color 0.2s; }
+  .footer-social a:hover { color: var(--blush); }
+
+  /* Reveal */
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    nav { padding: 18px 24px; }
+    .nav-links { display: none; }
+    .nav-burger { display: flex; }
+    .menu-hero { padding: 120px 24px 60px; flex-direction: column; }
+    .hero-note { max-width: 100%; }
+    .filter-bar { padding: 0 24px; }
+    .menu-content { padding: 0 24px 80px; }
+    .sizes-grid { grid-template-columns: 1fr 1fr; }
+    .products-grid { grid-template-columns: 1fr; }
+    .flavours-grid { grid-template-columns: repeat(2, 1fr); }
+    .fillings-grid { grid-template-columns: 1fr; }
+    .order-cta { padding: 48px 24px; flex-direction: column; }
+    footer { padding: 48px 24px 24px; }
+    .footer-inner { flex-direction: column; }
+    .footer-links { flex-wrap: wrap; gap: 28px; }
+    .custom-deco { flex-direction: column; }
+  }
+  @media (max-width: 480px) {
+    .sizes-grid { grid-template-columns: 1fr; }
+    .flavours-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Petit Demi</a>
+  <div class="nav-links">
+    <a href="menu.html" class="active">Menu</a>
+    <a href="index.html#about">About</a>
+    <a href="https://www.instagram.com/petit.demi/" target="_blank">Instagram</a>
+    <a href="cotizar.html" class="nav-cta">Order a Cake</a>
+  </div>
+  <div class="nav-burger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+</nav>
+
+<div class="mobile-menu" id="mobileMenu">
+  <button class="mobile-close" onclick="toggleMenu()">✕</button>
+  <a href="index.html" onclick="toggleMenu()">Home</a>
+  <a href="menu.html" onclick="toggleMenu()">Menu</a>
+  <a href="index.html#about" onclick="toggleMenu()">About</a>
+  <a href="cotizar.html" onclick="toggleMenu()">Order a Cake</a>
+</div>
+
+<!-- Hero -->
+<div class="menu-hero">
+  <div class="hero-text">
+    <div class="eyebrow">Amsterdam · Made to order</div>
+    <h1>The <em>Menu.</em></h1>
+    <p>Everything is baked fresh for your order. Pickup in Amsterdam. Minimum 7 days notice preferred.</p>
+  </div>
+  <div class="hero-note">
+    <p>"Don't see exactly what you're looking for? <a href="cotizar.html">Send me your request</a> and we'll figure it out together."</p>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <button class="filter-tab active" data-section="all" onclick="filterSection('all', this)">All</button>
+  <button class="filter-tab" data-section="cakes" onclick="filterSection('cakes', this)">Cakes</button>
+  <button class="filter-tab" data-section="other" onclick="filterSection('other', this)">Other Bakes</button>
+  <button class="filter-tab" data-section="flavours" onclick="filterSection('flavours', this)">Flavours</button>
+  <button class="filter-tab" data-section="fillings" onclick="filterSection('fillings', this)">Fillings & Toppings</button>
+</div>
+
+<div class="menu-content">
+
+  <!-- Cakes section -->
+  <div class="menu-block" id="section-cakes">
+    <div class="block-header reveal">
+      <div>
+        <h2 class="block-title">Custom <em>Cakes</em></h2>
+        <div class="block-note">All cakes are 7" (17cm) or 9" (23cm) round</div>
+      </div>
+    </div>
+    <div class="sizes-grid reveal" id="sizesGrid"></div>
+  </div>
+
+  <!-- Other bakes section -->
+  <div class="menu-block" id="section-other">
+    <div class="block-header reveal">
+      <h2 class="block-title">Other <em>Bakes</em></h2>
+    </div>
+    <div class="products-grid" id="productsGrid"></div>
+  </div>
+
+  <!-- Flavours section -->
+  <div class="flavours-section" id="section-flavours">
+    <div class="block-header reveal">
+      <div>
+        <h2 class="block-title">Cake <em>Flavours</em></h2>
+        <div class="block-note">Available for cakes and cupcakes</div>
+      </div>
+    </div>
+    <div class="flavours-grid" id="flavoursGrid"></div>
+  </div>
+
+  <!-- Fillings section -->
+  <div class="fillings-section" id="section-fillings">
+    <div class="block-header reveal" style="margin-top: 72px;">
+      <div>
+        <h2 class="block-title">Fillings &amp; <em>Toppings</em></h2>
+        <div class="block-note">Choose your frosting and filling combination</div>
+      </div>
+    </div>
+    <div class="fillings-grid" id="fillingsGrid"></div>
+    <div class="custom-deco reveal">
+      <div class="custom-deco-text">
+        <h3>Custom Decoration</h3>
+        <p>Basic decoration is always included. For more elaborate designs — florals, figures, hand-painted details — a surcharge applies depending on the complexity. Ask me when you order.</p>
+      </div>
+      <a href="cotizar.html" style="background: var(--ink); color: var(--cream); padding: 15px 32px; font-family: var(--sans); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; border-radius: 2px; white-space: nowrap; transition: background 0.2s;" onmouseover="this.style.background='#C5956C'" onmouseout="this.style.background='#1C1208'">Get a quote →</a>
+    </div>
+  </div>
+
+  <!-- Order CTA -->
+  <div class="order-cta reveal" id="section-cta">
+    <div class="order-cta-text">
+      <h2>Ready to <em>order?</em></h2>
+      <p>Fill out the form and I'll get back to you within 24–48 hours.</p>
+    </div>
+    <a href="cotizar.html" class="btn-primary">Start your order →</a>
+  </div>
+
+  <!-- Footnote -->
+  <div class="menu-footnote reveal">
+    <p>* All prices in EUR. Basic decoration included in all orders. Custom decoration surcharge applies depending on complexity. Pickup in Amsterdam — location confirmed upon order. Minimum 7 days notice preferred for all orders. Questions? <a href="mailto:info@petitdemi.com">info@petitdemi.com</a> or <a href="https://wa.me/31601089333">WhatsApp</a>.</p>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">Petit Demi</div>
+      <div class="footer-tagline">Custom cakes · Amsterdam</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <div class="footer-col-title">Bakery</div>
+        <a href="menu.html">The Menu</a>
+        <a href="cotizar.html">Order a Cake</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Connect</div>
+        <a href="https://www.instagram.com/petit.demi/" target="_blank">Instagram</a>
+        <a href="https://wa.me/31601089333" target="_blank">WhatsApp</a>
+        <a href="mailto:info@petitdemi.com">Email</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-legal">© 2025 Petit Demi · KVK 85225274</div>
+    <div class="footer-social">
+      <a href="https://www.instagram.com/petit.demi/" target="_blank">Instagram</a>
+      <a href="https://www.tiktok.com/@petitdemi" target="_blank">TikTok</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Menu data (inline — avoids ES module import issues in serve.mjs)
+const CAKE_SIZES = [
+  { id: '7_single', label: '7" Single layer', note: '17cm round', serves: '6–8 people', price: 35 },
+  { id: '7_double', label: '7" Double layer', note: '17cm round', serves: '8–10 people', price: 45 },
+  { id: '7_triple', label: '7" Triple layer', note: '17cm round', serves: '12+ people', price: 65 },
+  { id: '9_single', label: '9" Single layer', note: '23cm round', serves: '10–12 people', price: 40 },
+];
+
+const OTHER_PRODUCTS = [
+  { emoji: '🧁', label: 'Cupcakes', note: '6 pieces', price: 21, desc: 'Light, fluffy cupcakes in any of our signature flavours.', flavors: null },
+  { emoji: '🧁', label: 'Cupcakes', note: '12 pieces', price: 42, desc: 'A full dozen — perfect for a party.', flavors: null },
+  { emoji: '🍰', label: 'Cheesecake', note: '10 people', price: 45, desc: 'Silky, creamy cheesecakes with a buttery biscuit base.', flavors: ['Lemon', 'White Choc Raspberry', 'Vanilla', 'Chocolate', 'Lemon Meringue (+€2)', 'Brownie Bottom (+€2)'] },
+  { emoji: '🍫', label: 'Brownie', note: '12 pieces', price: 30, desc: 'Dense, fudgy brownies — the kind you can\'t stop at one.', flavors: ['Chocolate Chunk', 'Cheesecake (+€2)', 'Blondie', 'Choc & Nuts', 'Oreo'] },
+  { emoji: '🥧', label: 'Tart', note: '8–10 people', price: 40, desc: 'Elegant tarts with a crisp shell and luscious fillings.', flavors: ['Lemon Meringue', 'Mango Cream', 'Strawberry', 'Chocolate Caramel', 'Fruit'] },
+  { emoji: '🍪', label: 'Cookies', note: '10 pieces', price: 35, desc: 'Thick bakery-style cookies with golden edges and gooey centres.', flavors: ['Chocolate Chip', 'Caramel Choc Chip', 'White Choc Macadamia', 'Choc Pistachio', 'White Choc Raspberry'] },
+];
+
+const FLAVORS = ['Carrot','Chocolate','Red Velvet','Lemon Blueberry','Cookies & Cream','Lemon Raspberry','Vanilla','Hummingbird','Vanilla Confetti','Coconut Vanilla','Lemon Pistachio'];
+
+const FILLINGS = [
+  { label: 'Swiss Meringue Buttercream — Vanilla', surcharge: 0 },
+  { label: 'Swiss Meringue Buttercream — Chocolate', surcharge: 0 },
+  { label: 'Swiss Meringue Buttercream — White Chocolate', surcharge: 0 },
+  { label: 'Cream Cheese', surcharge: 1.5 },
+  { label: 'Chocolate Cream Cheese', surcharge: 1.5 },
+  { label: 'Lemon Curd', surcharge: 0 },
+  { label: 'Passionfruit Curd', surcharge: 0 },
+  { label: 'Raspberry Jam', surcharge: 0 },
+  { label: 'Blueberry Jam', surcharge: 0 },
+  { label: 'Strawberry Jam', surcharge: 0 },
+  { label: 'Fresh Fruit', surcharge: 0 },
+];
+
+// Render cake sizes
+const sizesGrid = document.getElementById('sizesGrid');
+CAKE_SIZES.forEach(s => {
+  sizesGrid.innerHTML += `
+    <div class="size-card">
+      <div class="size-name">${s.label}</div>
+      <div class="size-sub">${s.note}</div>
+      <div class="size-serves">${s.serves}</div>
+      <div class="size-price">€${s.price}</div>
+      <div class="size-from">from</div>
+    </div>`;
+});
+
+// Render other products
+const productsGrid = document.getElementById('productsGrid');
+OTHER_PRODUCTS.forEach(p => {
+  const flavorsHtml = p.flavors ? `<div class="product-flavors">${p.flavors.map(f => `<span class="flavor-tag">${f}</span>`).join('')}</div>` : '';
+  productsGrid.innerHTML += `
+    <div class="product-card">
+      <div class="product-emoji">${p.emoji}</div>
+      <div class="product-name">${p.label}</div>
+      <div class="product-serves">${p.note}</div>
+      <div class="product-desc">${p.desc}</div>
+      ${flavorsHtml}
+      <div class="product-price">€${p.price}</div>
+    </div>`;
+});
+
+// Render flavours
+const flavoursGrid = document.getElementById('flavoursGrid');
+FLAVORS.forEach(f => {
+  flavoursGrid.innerHTML += `<div class="flavour-card"><div class="flavour-card-name">${f}</div></div>`;
+});
+
+// Render fillings
+const fillingsGrid = document.getElementById('fillingsGrid');
+FILLINGS.forEach(f => {
+  const badge = f.surcharge > 0
+    ? `<span class="filling-badge surcharge">+€${f.surcharge.toFixed(2)}</span>`
+    : `<span class="filling-badge">included</span>`;
+  fillingsGrid.innerHTML += `<div class="filling-row"><div class="filling-name">${f.label}</div>${badge}</div>`;
+});
+
+// Filter section
+function filterSection(section, btn) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const all = ['cakes', 'other', 'flavours', 'fillings'];
+  if (section === 'all') {
+    all.forEach(s => document.getElementById('section-' + s).style.display = '');
+  } else {
+    all.forEach(s => { document.getElementById('section-' + s).style.display = s === section ? '' : 'none'; });
+  }
+  // scroll to content
+  document.querySelector('.menu-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Mobile menu
+function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
+
+// Scroll reveal
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }});
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

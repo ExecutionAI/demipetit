@@ -1,48 +1,50 @@
-/**
- * Screenshot tool — usage:
- *   node screenshot.mjs http://localhost:3000
- *   node screenshot.mjs http://localhost:3000 home
- *   node screenshot.mjs http://localhost:3000 home --width=390 --height=844
- *   node screenshot.mjs http://localhost:3000 full --full
- */
 import puppeteer from 'puppeteer';
-import { mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CHROME_PATH = 'C:/Users/execu/.cache/puppeteer/chrome/win64-146.0.7680.31/chrome-win64/chrome.exe';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
-const url    = args[0] || 'http://localhost:3000';
-const label  = args.find(a => !a.startsWith('--') && a !== url) || '';
-const full   = args.includes('--full');
-const width  = parseInt(args.find(a => a.startsWith('--width='))?.split('=')[1]  || '390');
-const height = parseInt(args.find(a => a.startsWith('--height='))?.split('=')[1] || '844');
+const url = args[0];
+if (!url) {
+  console.error('Usage: node screenshot.mjs <url> [label] [--width=N] [--height=N] [--full]');
+  process.exit(1);
+}
 
-const dir = join(__dirname, 'temporary screenshots');
-mkdirSync(dir, { recursive: true });
+let label = null;
+let width = 1440;
+let height = 900;
+let fullPage = false;
 
-const existing = (await import('fs')).readdirSync(dir).filter(f => f.endsWith('.png'));
-const n = existing.length + 1;
-const filename = `screenshot-${n}${label ? '-' + label : ''}.png`;
-const filepath = join(dir, filename);
+for (const a of args.slice(1)) {
+  if (a.startsWith('--width='))  width    = parseInt(a.split('=')[1]);
+  else if (a.startsWith('--height=')) height = parseInt(a.split('=')[1]);
+  else if (a === '--full')        fullPage = true;
+  else if (!a.startsWith('--'))   label    = a;
+}
+
+const screenshotDir = path.join(__dirname, 'temporary screenshots');
+if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir, { recursive: true });
+
+const existing = fs.readdirSync(screenshotDir).filter(f => f.match(/^screenshot-\d/));
+const nums = existing.map(f => parseInt(f.match(/^screenshot-(\d+)/)?.[1] || '0')).filter(n => !isNaN(n));
+const next = nums.length ? Math.max(...nums) + 1 : 1;
+const filename = label ? `screenshot-${next}-${label}.png` : `screenshot-${next}.png`;
+const outputPath = path.join(screenshotDir, filename);
+
+const CHROME = 'C:/Users/execu/.cache/puppeteer/chrome/win64-146.0.7680.31/chrome-win64/chrome.exe';
 
 const browser = await puppeteer.launch({
   headless: true,
-  executablePath: CHROME_PATH,
+  executablePath: fs.existsSync(CHROME) ? CHROME : undefined,
   args: ['--no-sandbox', '--disable-setuid-sandbox'],
 });
 
 const page = await browser.newPage();
-await page.setViewport({ width, height, deviceScaleFactor: 2 });
-await page.goto(url, { waitUntil: 'networkidle0' });
-
-if (full) {
-  await page.screenshot({ path: filepath, fullPage: true });
-} else {
-  await page.screenshot({ path: filepath });
-}
-
+await page.setViewport({ width, height });
+await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+await page.screenshot({ path: outputPath, fullPage });
 await browser.close();
-console.log(`Screenshot saved: ${filepath}`);
+
+console.log(`Screenshot saved: ${outputPath}`);
