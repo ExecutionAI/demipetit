@@ -359,16 +359,47 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
 }
 .bnav-badge.show { display: flex; }
 
+/* ── Hamburger button (mobile only) ── */
+.hamburger-btn {
+  display: none; background: none; border: 1px solid var(--border);
+  padding: 8px 10px; cursor: pointer; color: var(--ink); line-height: 1;
+  font-size: 16px; transition: border-color 0.2s;
+}
+.hamburger-btn:hover { border-color: var(--accent); }
+
+/* ── Sidebar overlay (mobile drawer) ── */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 49;
+  background: rgba(28,18,8,0.4); backdrop-filter: blur(2px);
+}
+.sidebar-overlay.open { display: block; }
+
+/* ── Calendar 2-week layout ── */
+.cal-week-label { font-family: var(--sans); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.cal-week + .cal-week-label { margin-top: 20px; }
+
 @media (max-width: 768px) {
-  .sidebar { display: none; }
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.34, 0.1, 0.1, 1);
+    display: flex !important;
+  }
+  .sidebar.open { transform: translateX(0); }
   .bottom-nav { display: block; }
+  .hamburger-btn { display: block; }
   .main { margin-left: 0; }
-  .main-header { padding: 18px 20px 14px; }
+  .main-header { padding: 14px 16px; gap: 8px; }
+  .main-header-left h1 { font-size: 20px; }
+  .header-new-order-text { display: none; }
   .main-body { padding: 20px 16px 80px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .cal-week { grid-template-columns: repeat(2, 1fr); }
+  .cal-week { grid-template-columns: repeat(7, 1fr); }
+  .cal-day { min-height: 70px; padding: 8px 6px; }
+  .cal-day-header { flex-direction: column; align-items: center; gap: 2px; }
+  .cal-order-pill { font-size: 9px; padding: 2px 4px; }
   .detail-panel { width: 100vw; }
   .panel-price-row { grid-template-columns: 1fr 1fr; }
+  .no-tabs { flex-wrap: nowrap; }
 }
 </style>
 </head>
@@ -384,6 +415,9 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
     <div class="login-error" id="loginError">Incorrect password. Try again.</div>
   </div>
 </div>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- App -->
 <div id="app">
@@ -432,9 +466,10 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
         <h1 id="headerTitle">Good <em>morning</em> ✨</h1>
         <div class="sub" id="headerSub">Loading your orders...</div>
       </div>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button class="header-refresh" onclick="initApp()">↻ Refresh</button>
-        <button class="header-refresh" onclick="openNewOrder()" style="background:var(--ink);color:white;border-color:var(--ink);">+ New Order</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="header-refresh" onclick="initApp()">↻</button>
+        <button class="header-refresh" onclick="openNewOrder()" style="background:var(--ink);color:white;border-color:var(--ink);">+ <span class="header-new-order-text">New Order</span></button>
+        <button class="hamburger-btn" onclick="openSidebar()" aria-label="Menu">☰</button>
       </div>
     </div>
 
@@ -504,7 +539,10 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
           <button class="cal-nav-btn" onclick="moveWeek(1)">Next →</button>
           <button class="cal-nav-btn" onclick="resetWeek()">Today</button>
         </div>
-        <div class="cal-week" id="calWeek"></div>
+        <div class="cal-week-label" id="calWeekLabel1"></div>
+        <div class="cal-week" id="calWeek1"></div>
+        <div class="cal-week-label" id="calWeekLabel2" style="margin-top:20px;"></div>
+        <div class="cal-week" id="calWeek2"></div>
       </div>
 
       <!-- Shopping list -->
@@ -866,14 +904,9 @@ function updateHeader() {
 function showSection(name, navEl) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active'));
-  navEl.classList.add('active');
-  // sync the other nav (sidebar ↔ bottom)
-  const sibling = document.querySelector(`.nav-item[onclick*="'${name}'"], .bottom-nav-item[data-section="${name}"]`);
-  if (sibling && sibling !== navEl) sibling.classList.add('active');
-  // also sync the opposite nav's counterpart
+  document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll(`[data-section="${name}"], .nav-item[onclick*="'${name}'"]`).forEach(el => el.classList.add('active'));
+  closeSidebar();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1104,30 +1137,56 @@ function moveWeek(dir) { calWeekStart = new Date(calWeekStart.getTime() + dir * 
 function resetWeek() { calWeekStart = getMonday(new Date()); renderCalendar(); }
 
 function renderCalendar() {
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(calWeekStart); d.setDate(calWeekStart.getDate() + i); return d; });
   const today = new Date().setHours(0,0,0,0);
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const monthYear = calWeekStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  document.getElementById('calTitle').textContent = monthYear;
-
   const STATUS_COLORS = { quote_received:'#DBEAFE', confirmed:'#D1FAE5', in_production:'#FEF3C7', ready:'#FEE2E2', delivered:'#F3F4F6', cancelled:'#FEE2E2' };
   const STATUS_TEXT   = { quote_received:'#2563EB', confirmed:'#065F46', in_production:'#92400E', ready:'#991B1B', delivered:'#6B7280', cancelled:'#991B1B' };
 
-  const calEl = document.getElementById('calWeek');
-  calEl.innerHTML = days.map((d, i) => {
-    const dateStr = d.toISOString().split('T')[0];
-    const isToday = d.getTime() === today;
-    const dayOrders = allOrders.filter(o => o.delivery_date === dateStr && !['cancelled'].includes(o.status));
-    const pillsHtml = dayOrders.map(o => {
-      const bg = STATUS_COLORS[o.status] || '#F3F4F6';
-      const fg = STATUS_TEXT[o.status] || '#374151';
-      return `<div class="cal-order-pill" style="background:${bg};color:${fg};" onclick="openPanel('${esc(o.id)}')">${esc(o.client?.full_name||'Order')}</div>`;
+  function renderWeek(startDate, elId) {
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startDate); d.setDate(startDate.getDate() + i); return d;
+    });
+    document.getElementById(elId).innerHTML = days.map((d, i) => {
+      const dateStr = d.toISOString().split('T')[0];
+      const isToday = d.getTime() === today;
+      const dayOrders = allOrders.filter(o => o.delivery_date === dateStr && o.status !== 'cancelled');
+      const pillsHtml = dayOrders.map(o => {
+        const bg = STATUS_COLORS[o.status] || '#F3F4F6';
+        const fg = STATUS_TEXT[o.status] || '#374151';
+        return `<div class="cal-order-pill" style="background:${bg};color:${fg};" onclick="openPanel('${esc(o.id)}')">${esc(o.client?.full_name||'Order')}</div>`;
+      }).join('');
+      return `<div class="cal-day${isToday?' today':''}">
+        <div class="cal-day-header"><span>${dayNames[i]}</span><span class="cal-day-num">${d.getDate()}</span></div>
+        ${pillsHtml}
+      </div>`;
     }).join('');
-    return `<div class="cal-day${isToday?' today':''}">
-      <div class="cal-day-header"><span>${dayNames[i]}</span><span class="cal-day-num">${d.getDate()}</span></div>
-      ${pillsHtml || ''}
-    </div>`;
-  }).join('');
+  }
+
+  const week2Start = new Date(calWeekStart.getTime() + 7 * 86400000);
+
+  const fmt = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  document.getElementById('calTitle').textContent =
+    `${fmt(calWeekStart)} – ${fmt(new Date(week2Start.getTime() + 6 * 86400000))}`;
+
+  document.getElementById('calWeekLabel1').textContent =
+    calWeekStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  document.getElementById('calWeekLabel2').textContent =
+    week2Start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  renderWeek(calWeekStart, 'calWeek1');
+  renderWeek(week2Start, 'calWeek2');
+}
+
+// ── Sidebar mobile drawer ─────────────────────────────────────────────────────
+
+function openSidebar() {
+  document.getElementById('sidebarOverlay').classList.add('open');
+  document.querySelector('.sidebar').classList.add('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebarOverlay').classList.remove('open');
+  document.querySelector('.sidebar').classList.remove('open');
 }
 
 // ── Shopping list ─────────────────────────────────────────────────────────────
