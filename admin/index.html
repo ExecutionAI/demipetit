@@ -285,6 +285,49 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
   .cal-week { grid-template-columns: repeat(3, 1fr); }
   .detail-panel { width: 90vw; }
 }
+/* ── New Order Panel ── */
+.no-tabs { display: flex; gap: 0; margin-top: 10px; border: 1px solid rgba(255,255,255,0.12); overflow: hidden; }
+.no-tab { flex: 1; padding: 7px 10px; background: none; border: none; font-family: var(--sans); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); transition: all 0.2s; cursor: pointer; }
+.no-tab:hover { color: var(--ink); background: var(--bg); }
+.no-tab.active { background: var(--accent); color: white; }
+
+.no-stage { margin-bottom: 20px; }
+.no-chat-area {
+  width: 100%; min-height: 160px; padding: 14px; border: 1px solid var(--border);
+  background: var(--bg); font-family: var(--sans); font-size: 13px; color: var(--ink);
+  outline: none; resize: vertical; line-height: 1.6;
+  transition: border-color 0.2s;
+}
+.no-chat-area:focus { border-color: var(--accent); }
+.no-chat-area::placeholder { color: var(--muted); font-style: italic; }
+.btn-parse {
+  margin-top: 10px; width: 100%; padding: 11px; background: var(--ink); color: white;
+  border: none; font-family: var(--sans); font-size: 12px; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer; transition: background 0.2s;
+}
+.btn-parse:hover { background: var(--accent); }
+.btn-parse:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.no-voice-center { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 20px 0; }
+.record-btn {
+  width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--accent);
+  background: none; color: var(--accent); font-size: 28px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  position: relative;
+}
+.record-btn:hover { background: rgba(197,149,108,0.1); }
+.record-btn.recording { background: var(--danger); border-color: var(--danger); color: white; animation: pulse-rec 1.2s ease-in-out infinite; }
+@keyframes pulse-rec { 0%,100% { box-shadow: 0 0 0 0 rgba(185,74,72,0.4); } 50% { box-shadow: 0 0 0 12px rgba(185,74,72,0); } }
+.record-hint { font-family: var(--sans); font-size: 12px; color: var(--muted); text-align: center; }
+.record-timer { font-family: var(--serif); font-size: 22px; color: var(--danger); display: none; }
+.record-timer.show { display: block; }
+.no-upload-link { font-family: var(--sans); font-size: 12px; color: var(--accent); cursor: pointer; text-decoration: underline; }
+.no-transcript { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); font-family: var(--sans); font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.6; display: none; }
+.no-transcript.show { display: block; }
+.no-parse-status { font-family: var(--sans); font-size: 12px; color: var(--accent); margin-top: 8px; min-height: 18px; }
+
+.no-section-divider { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
 /* ── Bottom nav (mobile only) ── */
 .bottom-nav {
   display: none;
@@ -386,7 +429,10 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
         <h1 id="headerTitle">Good <em>morning</em> ✨</h1>
         <div class="sub" id="headerSub">Loading your orders...</div>
       </div>
-      <button class="header-refresh" onclick="initApp()">↻ Refresh</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="header-refresh" onclick="initApp()">↻ Refresh</button>
+        <button class="header-refresh" onclick="openNewOrder()" style="background:var(--ink);color:white;border-color:var(--ink);">+ New Order</button>
+      </div>
     </div>
 
     <div class="main-body">
@@ -511,6 +557,159 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
 </div>
 
 <!-- Delete modal -->
+<!-- New Order Panel -->
+<div class="panel-overlay" id="newOrderOverlay" onclick="closeNewOrder()"></div>
+<div class="detail-panel" id="newOrderPanel">
+  <div class="panel-header">
+    <div style="flex:1">
+      <div class="panel-title">New Order</div>
+      <div class="no-tabs">
+        <button class="no-tab active" onclick="switchNoTab('manual', this)">Manual</button>
+        <button class="no-tab" onclick="switchNoTab('chat', this)">Paste Chat</button>
+        <button class="no-tab" onclick="switchNoTab('voice', this)">Voice Note</button>
+      </div>
+    </div>
+    <button class="panel-close" onclick="closeNewOrder()" style="margin-left:12px;">✕</button>
+  </div>
+  <div class="panel-body">
+
+    <!-- Chat stage -->
+    <div class="no-stage" id="no-stage-chat" style="display:none">
+      <textarea class="no-chat-area" id="noChatText" placeholder="Paste the full WhatsApp or email conversation here…&#10;&#10;e.g. 'Hi! I'd love to order a chocolate cake for my daughter's birthday on April 15th...'"></textarea>
+      <button class="btn-parse" id="noChatBtn" onclick="parseChat()">Extract Order Details →</button>
+      <div class="no-parse-status" id="noChatStatus"></div>
+    </div>
+
+    <!-- Voice stage -->
+    <div class="no-stage" id="no-stage-voice" style="display:none">
+      <div class="no-voice-center">
+        <button class="record-btn" id="noRecordBtn" onclick="toggleRecording()">🎙</button>
+        <div class="record-hint" id="noRecordHint">Tap to start recording</div>
+        <div class="record-timer" id="noRecordTimer">0:00</div>
+        <span class="no-upload-link" onclick="document.getElementById('noAudioFile').click()">or upload an audio file</span>
+        <input type="file" id="noAudioFile" accept="audio/*" style="display:none" onchange="parseVoiceFile(this)">
+      </div>
+      <div class="no-transcript" id="noTranscript"></div>
+      <div class="no-parse-status" id="noVoiceStatus"></div>
+    </div>
+
+    <!-- Shared order form -->
+    <div id="no-form">
+      <div class="no-section-divider">Customer</div>
+      <div class="panel-field" style="margin-bottom:10px"><label>Full name *</label><input class="panel-input" id="no-name" placeholder="Jane Bakker"></div>
+      <div class="panel-field" style="margin-bottom:10px"><label>Email *</label><input class="panel-input" id="no-email" type="email" placeholder="jane@email.com"></div>
+      <div class="panel-field" style="margin-bottom:10px"><label>Phone</label><input class="panel-input" id="no-phone" placeholder="+31 6..."></div>
+
+      <div class="no-section-divider">Order</div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Product *</label>
+        <select class="panel-select" id="no-product" onchange="noUpdateProductFields()">
+          <option value="">Select product…</option>
+          <option value="cake">Cake</option>
+          <option value="cupcakes">Cupcakes</option>
+          <option value="cheesecake">Cheesecake</option>
+          <option value="brownie">Brownie</option>
+          <option value="tart">Tart</option>
+          <option value="cookies">Cookies</option>
+        </select>
+      </div>
+      <div id="no-cake-fields">
+        <div class="panel-field" style="margin-bottom:10px">
+          <label>Size</label>
+          <select class="panel-select" id="no-size">
+            <option value="">Select size…</option>
+            <option value="7_single">7" Single layer — 6–8 people — €35</option>
+            <option value="7_double">7" Double layer — 8–10 people — €45</option>
+            <option value="7_triple">7" Triple layer — 12+ people — €65</option>
+            <option value="9_single">9" Single layer — 10–12 people — €40</option>
+          </select>
+        </div>
+        <div class="panel-field" style="margin-bottom:10px">
+          <label>Flavor</label>
+          <select class="panel-select" id="no-flavor">
+            <option value="">Select flavor…</option>
+            <option>Carrot</option><option>Chocolate</option><option>Red Velvet</option>
+            <option>Lemon Blueberry</option><option>Cookies & Cream</option>
+            <option>Lemon Raspberry</option><option>Vanilla</option>
+            <option>Hummingbird</option><option>Vanilla Confetti</option>
+            <option>Coconut Vanilla</option><option>Lemon Pistachio</option>
+          </select>
+        </div>
+        <div class="panel-field" style="margin-bottom:10px">
+          <label>Filling</label>
+          <select class="panel-select" id="no-filling">
+            <option value="">Select filling…</option>
+            <option value="smb_vanilla">SMB Vanilla</option>
+            <option value="smb_choc">SMB Chocolate</option>
+            <option value="smb_white">SMB White Chocolate</option>
+            <option value="cream_cheese">Cream Cheese (+€1.50)</option>
+            <option value="choc_cc">Chocolate Cream Cheese (+€1.50)</option>
+            <option value="curd_lemon">Lemon Curd</option>
+            <option value="curd_passion">Passionfruit Curd</option>
+            <option value="jam_rasp">Raspberry Jam</option>
+            <option value="jam_blueberry">Blueberry Jam</option>
+            <option value="jam_strawb">Strawberry Jam</option>
+            <option value="fresh_fruit">Fresh Fruit</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-field" style="margin-bottom:10px" id="no-flavor-free" style="display:none">
+        <label>Flavor / Variant</label>
+        <input class="panel-input" id="no-flavor-text" placeholder="e.g. Lemon Meringue">
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Quantity</label>
+        <input class="panel-input" id="no-qty" type="number" min="1" value="1" placeholder="1">
+      </div>
+
+      <div class="no-section-divider">Details</div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Occasion</label>
+        <select class="panel-select" id="no-occasion">
+          <option value="">Select occasion…</option>
+          <option>Birthday</option><option>Anniversary</option><option>Baby Shower</option>
+          <option>Wedding</option><option>Corporate</option><option>Just Because</option><option>Other</option>
+        </select>
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Decoration</label>
+        <select class="panel-select" id="no-deco">
+          <option value="basic">Basic</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Decoration notes</label>
+        <textarea class="panel-textarea" id="no-deco-notes" placeholder="e.g. Pink flowers, 'Happy Birthday Sarah'..." style="min-height:60px"></textarea>
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Delivery date *</label>
+        <input class="panel-input" id="no-date" type="date">
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Status</label>
+        <select class="panel-select" id="no-status">
+          <option value="confirmed">Confirmed</option>
+          <option value="quote_received">Quote received</option>
+          <option value="in_production">In production</option>
+        </select>
+      </div>
+      <div class="panel-field" style="margin-bottom:10px">
+        <label>Internal notes</label>
+        <textarea class="panel-textarea" id="no-notes" placeholder="Any extra details…" style="min-height:60px"></textarea>
+      </div>
+
+      <div class="panel-actions" style="margin-top:8px;">
+        <button class="btn-panel btn-panel-primary" id="noSaveBtn" onclick="saveNewOrder()">Save Order</button>
+        <button class="btn-panel btn-panel-secondary" onclick="closeNewOrder()">Cancel</button>
+        <div class="save-indicator" id="noSaveIndicator">✓ Order saved</div>
+      </div>
+      <div style="font-family:var(--sans);font-size:12px;color:var(--danger);margin-top:8px;display:none;" id="noSaveError"></div>
+    </div>
+
+  </div>
+</div>
+
 <div class="modal-overlay" id="deleteModal" onclick="if(event.target===this) closeDeleteModal()">
   <div class="modal-card">
     <div class="modal-header">
@@ -1021,6 +1220,248 @@ async function executeDelete(id) {
     alert('Delete failed: ' + err.message);
   }
   btn.disabled = false; btn.textContent = 'Delete';
+}
+
+// ── New Order Panel ────────────────────────────────────────────────────────────
+
+let noCurrentTab = 'manual';
+let noMediaRecorder = null;
+let noAudioChunks = [];
+let noRecording = false;
+let noTimerInterval = null;
+let noRecordSeconds = 0;
+
+function openNewOrder() {
+  document.getElementById('newOrderOverlay').classList.add('open');
+  document.getElementById('newOrderPanel').classList.add('open');
+  switchNoTab('manual', document.querySelector('.no-tab'));
+  noResetForm();
+}
+
+function closeNewOrder() {
+  document.getElementById('newOrderOverlay').classList.remove('open');
+  document.getElementById('newOrderPanel').classList.remove('open');
+  if (noRecording) stopRecording();
+}
+
+function switchNoTab(tab, btn) {
+  noCurrentTab = tab;
+  document.querySelectorAll('.no-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('no-stage-chat').style.display = tab === 'chat' ? 'block' : 'none';
+  document.getElementById('no-stage-voice').style.display = tab === 'voice' ? 'block' : 'none';
+  // manual shows form immediately; chat/voice show form only after parse
+  if (tab === 'manual') {
+    document.getElementById('no-form').style.display = 'block';
+  } else {
+    // hide form until parse completes — but keep it if already populated
+    const hasData = document.getElementById('no-name').value || document.getElementById('no-date').value;
+    if (!hasData) document.getElementById('no-form').style.display = 'none';
+  }
+}
+
+function noResetForm() {
+  ['no-name','no-email','no-phone','no-date','no-qty','no-deco-notes','no-notes','no-flavor-text'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['no-product','no-size','no-flavor','no-filling','no-occasion','no-deco','no-status'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.selectedIndex = 0;
+  });
+  document.getElementById('no-qty').value = 1;
+  document.getElementById('no-status').value = 'confirmed';
+  document.getElementById('noChatText').value = '';
+  document.getElementById('noChatStatus').textContent = '';
+  document.getElementById('noVoiceStatus').textContent = '';
+  document.getElementById('noTranscript').classList.remove('show');
+  document.getElementById('noTranscript').textContent = '';
+  document.getElementById('noSaveError').style.display = 'none';
+  document.getElementById('noSaveIndicator').classList.remove('show');
+  noUpdateProductFields();
+}
+
+function noUpdateProductFields() {
+  const product = document.getElementById('no-product').value;
+  document.getElementById('no-cake-fields').style.display = product === 'cake' ? 'block' : 'none';
+  document.getElementById('no-flavor-free').style.display = (product && product !== 'cake') ? 'block' : 'none';
+}
+
+function noFillForm(data) {
+  if (!data) return;
+  if (data.full_name) document.getElementById('no-name').value = data.full_name;
+  if (data.email) document.getElementById('no-email').value = data.email;
+  if (data.phone) document.getElementById('no-phone').value = data.phone;
+  if (data.product_type) { document.getElementById('no-product').value = data.product_type; noUpdateProductFields(); }
+  if (data.cake_size) document.getElementById('no-size').value = data.cake_size;
+  if (data.flavor) {
+    const sel = document.getElementById('no-flavor');
+    const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === data.flavor.toLowerCase());
+    if (opt) sel.value = opt.value; else document.getElementById('no-flavor-text').value = data.flavor;
+  }
+  if (data.filling) document.getElementById('no-filling').value = data.filling;
+  if (data.quantity) document.getElementById('no-qty').value = data.quantity;
+  if (data.decoration_type) document.getElementById('no-deco').value = data.decoration_type;
+  if (data.decoration_notes) document.getElementById('no-deco-notes').value = data.decoration_notes;
+  if (data.occasion) {
+    const sel = document.getElementById('no-occasion');
+    const opt = Array.from(sel.options).find(o => o.value.toLowerCase() === data.occasion.toLowerCase());
+    if (opt) sel.value = opt.value;
+  }
+  if (data.delivery_date) document.getElementById('no-date').value = data.delivery_date;
+  if (data.notes) document.getElementById('no-notes').value = data.notes;
+  document.getElementById('no-form').style.display = 'block';
+}
+
+// Chat parsing
+async function parseChat() {
+  const text = document.getElementById('noChatText').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('noChatBtn');
+  const status = document.getElementById('noChatStatus');
+  btn.disabled = true; btn.textContent = 'Extracting…';
+  status.textContent = '🤖 Reading the conversation…';
+  try {
+    const data = await apiFetch('/api/admin/orders/parse-chat', {
+      method: 'POST', body: JSON.stringify({ text }),
+    });
+    noFillForm(data.extracted);
+    status.textContent = '✓ Details extracted — review and save below.';
+  } catch (err) {
+    status.textContent = '⚠ ' + err.message;
+  }
+  btn.disabled = false; btn.textContent = 'Extract Order Details →';
+}
+
+// Voice recording
+function toggleRecording() {
+  if (noRecording) stopRecording();
+  else startRecording();
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    noAudioChunks = [];
+    noMediaRecorder = new MediaRecorder(stream);
+    noMediaRecorder.ondataavailable = e => { if (e.data.size > 0) noAudioChunks.push(e.data); };
+    noMediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      processRecording();
+    };
+    noMediaRecorder.start();
+    noRecording = true;
+    noRecordSeconds = 0;
+    const btn = document.getElementById('noRecordBtn');
+    btn.classList.add('recording'); btn.textContent = '⏹';
+    document.getElementById('noRecordHint').textContent = 'Recording… tap to stop';
+    document.getElementById('noRecordTimer').classList.add('show');
+    noTimerInterval = setInterval(() => {
+      noRecordSeconds++;
+      const m = Math.floor(noRecordSeconds / 60), s = noRecordSeconds % 60;
+      document.getElementById('noRecordTimer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    }, 1000);
+  } catch (err) {
+    document.getElementById('noVoiceStatus').textContent = '⚠ Microphone access denied.';
+  }
+}
+
+function stopRecording() {
+  if (noMediaRecorder && noRecording) {
+    noMediaRecorder.stop();
+    noRecording = false;
+    clearInterval(noTimerInterval);
+    const btn = document.getElementById('noRecordBtn');
+    btn.classList.remove('recording'); btn.textContent = '🎙';
+    document.getElementById('noRecordHint').textContent = 'Processing…';
+    document.getElementById('noRecordTimer').classList.remove('show');
+  }
+}
+
+async function processRecording() {
+  const blob = new Blob(noAudioChunks, { type: 'audio/webm' });
+  await sendAudioToServer(blob, 'audio/webm');
+}
+
+async function parseVoiceFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  await sendAudioToServer(file, file.type);
+  input.value = '';
+}
+
+async function sendAudioToServer(blob, mimeType) {
+  const status = document.getElementById('noVoiceStatus');
+  status.textContent = '🤖 Transcribing audio…';
+  document.getElementById('noRecordHint').textContent = 'Tap to record again';
+  try {
+    const base64 = await blobToBase64(blob);
+    const data = await apiFetch('/api/admin/orders/parse-voice', {
+      method: 'POST',
+      body: JSON.stringify({ audio_base64: base64.split(',')[1], mime_type: mimeType }),
+    });
+    if (data.transcript) {
+      const t = document.getElementById('noTranscript');
+      t.textContent = '"' + data.transcript + '"';
+      t.classList.add('show');
+    }
+    noFillForm(data.extracted);
+    status.textContent = '✓ Order extracted — review and save below.';
+  } catch (err) {
+    status.textContent = '⚠ ' + err.message;
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Save order
+async function saveNewOrder() {
+  const errEl = document.getElementById('noSaveError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('no-name').value.trim();
+  const email = document.getElementById('no-email').value.trim();
+  const product = document.getElementById('no-product').value;
+  const date = document.getElementById('no-date').value;
+  if (!name || !email || !product || !date) {
+    errEl.textContent = 'Please fill in: name, email, product, and delivery date.';
+    errEl.style.display = 'block'; return;
+  }
+  const btn = document.getElementById('noSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const flavor = product === 'cake'
+      ? document.getElementById('no-flavor').value
+      : document.getElementById('no-flavor-text').value;
+    const body = {
+      full_name: name,
+      email,
+      phone: document.getElementById('no-phone').value.trim() || null,
+      product_type: product,
+      cake_size: document.getElementById('no-size').value || null,
+      flavor: flavor || null,
+      filling: document.getElementById('no-filling').value || null,
+      quantity: parseInt(document.getElementById('no-qty').value) || 1,
+      decoration_type: document.getElementById('no-deco').value || 'basic',
+      decoration_notes: document.getElementById('no-deco-notes').value.trim() || null,
+      occasion: document.getElementById('no-occasion').value || null,
+      delivery_date: date,
+      notes: document.getElementById('no-notes').value.trim() || null,
+      initial_status: document.getElementById('no-status').value,
+    };
+    await apiFetch('/api/admin/orders', { method: 'POST', body: JSON.stringify(body) });
+    document.getElementById('noSaveIndicator').classList.add('show');
+    await initApp();
+    setTimeout(closeNewOrder, 1200);
+  } catch (err) {
+    errEl.textContent = '⚠ ' + err.message;
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Save Order';
 }
 </script>
 </body>
