@@ -362,8 +362,9 @@ app.patch('/api/admin/orders/:id', requireAdmin, async (req, res) => {
     if (base_price !== undefined)     updates.base_price     = base_price;
     if (extras_price !== undefined)   updates.extras_price   = extras_price;
     if (total_price !== undefined)    updates.total_price    = total_price;
-    if (internal_notes !== undefined) updates.internal_notes = internal_notes;
-    if (delivery_date !== undefined)  updates.delivery_date  = delivery_date;
+    if (internal_notes !== undefined)        updates.internal_notes       = internal_notes;
+    if (delivery_date !== undefined)         updates.delivery_date        = delivery_date;
+    if (req.body.ingredients_ordered !== undefined) updates.ingredients_ordered = req.body.ingredients_ordered;
 
     const { data, error } = await supabase
       .from('orders')

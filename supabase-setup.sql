@@ -35,10 +35,14 @@ CREATE TABLE IF NOT EXISTS petitdemi.orders (
   total_price      numeric(10,2),
   ai_summary       text,
   raw_quote        jsonb,
-  internal_notes   text,
-  created_at       timestamptz DEFAULT now(),
-  updated_at       timestamptz DEFAULT now()
+  internal_notes        text,
+  ingredients_ordered   boolean DEFAULT false,
+  created_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now()
 );
+
+-- Migration (run if table already exists):
+-- ALTER TABLE petitdemi.orders ADD COLUMN IF NOT EXISTS ingredients_ordered boolean DEFAULT false;
 
 -- 4. Auto-update updated_at trigger
 CREATE OR REPLACE FUNCTION petitdemi.set_updated_at()

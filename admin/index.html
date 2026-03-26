@@ -227,6 +227,9 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
 .checklist-item:last-child { border-bottom: none; }
 .checklist-item:hover { background: var(--bg); }
 .checklist-item.checked { background: rgba(197,149,108,0.06); }
+.checklist-item.ingredients-done { opacity: 0.5; cursor: default; background: var(--bg); }
+.checklist-item.ingredients-done .check-box { border-style: dashed; }
+.ingr-ordered-badge { font-family: var(--sans); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--success); background: rgba(61,122,94,0.1); padding: 2px 8px; border-radius: 2px; margin-left: auto; white-space: nowrap; }
 .check-box { width: 18px; height: 18px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .checklist-item.checked .check-box { background: var(--accent); border-color: var(--accent); }
 .check-tick { color: white; font-size: 11px; display: none; }
@@ -519,8 +522,9 @@ td { padding: 13px 16px; font-family: var(--sans); font-size: 13px; }
           <div class="shopping-list-panel">
             <div class="list-header">
               <h3>Ingredient list</h3>
-              <div style="display:flex;gap:8px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-print" onclick="window.print()" id="btnPrint" style="display:none;">🖨 Print</button>
+                <button class="btn-panel btn-panel-secondary" id="btnMarkOrdered" onclick="markIngredientsOrdered()" style="display:none;font-size:11px;padding:8px 14px;">✓ Mark ingredients ordered</button>
                 <button class="btn-generate" id="btnGenerate" onclick="generateShoppingList()">Generate →</button>
               </div>
             </div>
@@ -1129,21 +1133,28 @@ function renderCalendar() {
 // ── Shopping list ─────────────────────────────────────────────────────────────
 
 function renderChecklist() {
-  const eligible = allOrders.filter(o => ['confirmed','in_production'].includes(o.status));
+  const eligible = allOrders.filter(o => o.status === 'in_production');
   const container = document.getElementById('checklistItems');
-  if (!eligible.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">No confirmed or in-production orders.</div>'; return; }
-  container.innerHTML = eligible.map(o => `
-    <div class="checklist-item${checkedOrders.has(o.id)?' checked':''}" onclick="toggleCheck('${esc(o.id)}', this)" data-id="${esc(o.id)}">
-      <div class="check-box"><span class="check-tick">✓</span></div>
+  if (!eligible.length) { container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-style:italic;font-size:13px;">No in-production orders.</div>'; return; }
+  container.innerHTML = eligible.map(o => {
+    const locked = !!o.ingredients_ordered;
+    return `
+    <div class="checklist-item${locked ? ' ingredients-done' : checkedOrders.has(o.id) ? ' checked' : ''}"
+         onclick="${locked ? '' : `toggleCheck('${esc(o.id)}', this)`}" data-id="${esc(o.id)}">
+      <div class="check-box">${locked ? '' : `<span class="check-tick">✓</span>`}</div>
       <div class="checklist-item-info">
         <div class="checklist-item-name">${esc(o.client?.full_name||'Order')} — ${esc(productLabel(o))}</div>
         <div class="checklist-item-sub">${esc(o.flavor||'No flavour')} · Due ${fmtDate(o.delivery_date)}</div>
       </div>
-    </div>`).join('');
+      ${locked ? '<span class="ingr-ordered-badge">Ingredients ordered</span>' : ''}
+    </div>`;
+  }).join('');
   updateChecklistCount();
 }
 
 function toggleCheck(id, el) {
+  const order = allOrders.find(o => o.id === id);
+  if (order?.ingredients_ordered) return;
   if (checkedOrders.has(id)) checkedOrders.delete(id); else checkedOrders.add(id);
   el.classList.toggle('checked', checkedOrders.has(id));
   updateChecklistCount();
@@ -1162,10 +1173,31 @@ async function generateShoppingList() {
     const result = await apiFetch('/api/admin/shopping-list', { method: 'POST', body: JSON.stringify({ order_ids: [...checkedOrders] }) });
     renderShoppingList(result);
     document.getElementById('btnPrint').style.display = '';
+    document.getElementById('btnMarkOrdered').style.display = '';
   } catch (err) {
     document.getElementById('shoppingListContent').innerHTML = `<div class="list-empty">Error: ${esc(err.message)}</div>`;
   }
   btn.disabled = false; btn.textContent = 'Generate →';
+}
+
+async function markIngredientsOrdered() {
+  const btn = document.getElementById('btnMarkOrdered');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    await Promise.all([...checkedOrders].map(id =>
+      apiFetch(`/api/admin/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ ingredients_ordered: true }) })
+    ));
+    // update local state
+    allOrders = allOrders.map(o => checkedOrders.has(o.id) ? { ...o, ingredients_ordered: true } : o);
+    checkedOrders.clear();
+    renderChecklist();
+    document.getElementById('btnMarkOrdered').style.display = 'none';
+    document.getElementById('btnPrint').style.display = 'none';
+    document.getElementById('shoppingListContent').innerHTML = '<div class="list-empty">Ingredients marked as ordered.</div>';
+  } catch (err) {
+    alert('Failed to mark: ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = '✓ Mark ingredients ordered';
 }
 
 function renderShoppingList({ groups, order_count }) {
